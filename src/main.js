@@ -12,6 +12,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, isSmallScreen ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+// 太陽與樹都是靜止的，陰影只在場景內容改變時重算一次
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 400);
@@ -21,7 +24,13 @@ camera.position.copy(CAMERA_BASE);
 
 const rng = createRng(20261121);
 createEnvironment(scene, rng);
-scene.add(createForest(rng));
+// 楓樹模型非同步載入；用獨立的亂數序列，載入時機不影響其他物件的配置
+createForest(createRng(7))
+  .then((forest) => {
+    scene.add(forest);
+    renderer.shadowMap.needsUpdate = true;
+  })
+  .catch((error) => console.error('楓樹模型載入失敗', error));
 scene.add(createGroundLeaves({ count: isSmallScreen ? 1200 : 2600, rng }));
 
 const fallingLeaves = createFallingLeaves({

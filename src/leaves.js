@@ -45,7 +45,6 @@ function createLeafMesh(count, rng) {
 export function createFallingLeaves({ count, rng, speedScale = 1 }) {
   const mesh = createLeafMesh(count, rng);
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  mesh.castShadow = true;
 
   const leaves = Array.from({ length: count }, () => ({
     x: range(rng, AREA.xMin, AREA.xMax),
