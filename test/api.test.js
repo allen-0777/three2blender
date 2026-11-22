@@ -62,13 +62,20 @@ describe('createRateLimiter', () => {
   test('視窗內超過上限就要等，視窗過了恢復', () => {
     const limiter = createRateLimiter({ limit: 3, windowMs: 60_000 });
     const t0 = 1_000_000;
-    for (let i = 0; i < 3; i++) {
-      assert.equal(limiter.retryAfterSeconds('a', t0 + i), 0);
-      limiter.record('a', t0 + i);
-    }
-    assert.equal(limiter.retryAfterSeconds('a', t0 + 10_000), 50);
-    assert.equal(limiter.retryAfterSeconds('b', t0 + 10_000), 0);
-    assert.equal(limiter.retryAfterSeconds('a', t0 + 60_001), 0);
+    for (let i = 0; i < 3; i++) assert.equal(limiter.tryConsume('a', t0 + i).ok, true);
+    assert.deepEqual(limiter.tryConsume('a', t0 + 10_000), { ok: false, retryAfter: 50 });
+    assert.equal(limiter.tryConsume('b', t0 + 10_000).ok, true);
+    assert.equal(limiter.tryConsume('a', t0 + 60_001).ok, true);
+  });
+
+  test('release 把額度還回去，且重複呼叫只還一次', () => {
+    const limiter = createRateLimiter({ limit: 1, windowMs: 60_000 });
+    const slot = limiter.tryConsume('a', 5);
+    assert.equal(limiter.tryConsume('a', 6).ok, false);
+    slot.release();
+    slot.release();
+    assert.equal(limiter.tryConsume('a', 7).ok, true);
+    assert.equal(limiter.tryConsume('a', 8).ok, false);
   });
 });
 
@@ -155,6 +162,26 @@ describe('API（JSON 檔 fallback）', () => {
     assert.equal(blocked.status, 429);
     assert.ok(Number(blocked.headers.get('retry-after')) > 0);
     assert.equal((await (await fetch(`${base}/api/wishes/count`)).json()).count, 3);
+  });
+
+  test('並發送出也不能超過上限', async () => {
+    const store = await createFileStore({ file: path.join(directory, 'burst', 'wishes.json') });
+    const burst = createApp({ store, distDir: path.join(directory, 'dist') }).listen(0);
+    await new Promise((resolve) => burst.once('listening', resolve));
+    const url = `http://127.0.0.1:${burst.address().port}/api/wishes`;
+    const statuses = await Promise.all(
+      Array.from({ length: 12 }, (_, i) =>
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `並發 ${i}` }),
+        }).then((response) => response.status),
+      ),
+    );
+    await new Promise((resolve) => burst.close(resolve));
+    assert.equal(statuses.filter((status) => status === 201).length, 3);
+    assert.equal(statuses.filter((status) => status === 429).length, 9);
+    assert.equal(await store.count(), 3);
   });
 
   test('未知的 API 路徑回 404 JSON', async () => {

@@ -19,14 +19,30 @@ export function createRateLimiter({ limit = 3, windowMs = 60_000 } = {}) {
   sweep.unref();
 
   return {
-    /** 回傳 0 表示可以送出；否則回傳還要等幾秒 */
-    retryAfterSeconds(key, now = Date.now()) {
+    /**
+     * 檢查並佔用一個額度（同步完成，並發請求不會同時通過檢查）。
+     * 回傳 { ok: true, release } 或 { ok: false, retryAfter: 秒數 }。
+     * 留言最後沒有成立（驗證失敗、寫入失敗）時呼叫 release() 把額度還回去。
+     */
+    tryConsume(key, now = Date.now()) {
       const list = recent(key, now);
-      if (list.length < limit) return 0;
-      return Math.max(1, Math.ceil((list[0] + windowMs - now) / 1000));
-    },
-    record(key, now = Date.now()) {
-      hits.set(key, [...recent(key, now), now]);
+      if (list.length >= limit) {
+        return { ok: false, retryAfter: Math.max(1, Math.ceil((list[0] + windowMs - now) / 1000)) };
+      }
+      hits.set(key, [...list, now]);
+      let released = false;
+      return {
+        ok: true,
+        release() {
+          if (released) return;
+          released = true;
+          const current = hits.get(key);
+          const index = current ? current.lastIndexOf(now) : -1;
+          if (index === -1) return;
+          current.splice(index, 1);
+          if (current.length === 0) hits.delete(key);
+        },
+      };
     },
   };
 }

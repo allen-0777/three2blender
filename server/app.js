@@ -15,7 +15,8 @@ function parseInteger(value, fallback) {
 export function createApp({ store, distDir, rateLimit = { limit: 3, windowMs: 60_000 } }) {
   const app = express();
   app.disable('x-powered-by');
-  // 部署在平台的反向代理後面：信任一層代理，req.ip 才會是真正的用戶端 IP
+  // 部署在平台的反向代理後面：信任一層代理，req.ip 才會是真正的用戶端 IP。
+  // 注意：若服務直接對外（前面沒有代理），用戶端可以偽造 X-Forwarded-For 繞過每 IP 限制。
   app.set('trust proxy', 1);
 
   const limiter = createRateLimiter(rateLimit);
@@ -50,22 +51,28 @@ export function createApp({ store, distDir, rateLimit = { limit: 3, windowMs: 60
   });
 
   api.post('/wishes', async (req, res) => {
-    const key = req.ip ?? 'unknown';
-    const retryAfter = limiter.retryAfterSeconds(key);
-    if (retryAfter > 0) {
-      res.setHeader('Retry-After', String(retryAfter));
-      res.status(429).json({ error: `留言太頻繁了，請 ${retryAfter} 秒後再試` });
+    // 先同步佔用額度再做任何 await，避免並發請求同時通過檢查
+    const slot = limiter.tryConsume(req.ip ?? 'unknown');
+    if (!slot.ok) {
+      res.setHeader('Retry-After', String(slot.retryAfter));
+      res.status(429).json({ error: `留言太頻繁了，請 ${slot.retryAfter} 秒後再試` });
       return;
     }
 
     const result = validateWish(req.body);
     if (!result.ok) {
+      slot.release();
       res.status(400).json({ error: result.error });
       return;
     }
 
-    const wish = await store.add(result.value);
-    limiter.record(key);
+    let wish;
+    try {
+      wish = await store.add(result.value);
+    } catch (error) {
+      slot.release();
+      throw error;
+    }
     res.status(201).json({ wish, count: await store.count() });
   });
 

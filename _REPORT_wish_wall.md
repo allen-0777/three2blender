@@ -16,7 +16,7 @@
 - `GET /healthz`、`GET /api/wishes?limit=100`（另支援 `after=<id>` 供輪詢只拿新留言）、`POST /api/wishes`、`GET /api/wishes/count`。
 - 儲存層：有 `DATABASE_URL` 用 `pg` 連 PostgreSQL，啟動時 `CREATE TABLE IF NOT EXISTS wishes (id, nickname, message, created_at)`；沒有就 fallback 到 `data/wishes.json`，log 標明 `FALLBACK`。SQL 全部參數化。
 - 驗證：去前後空白、移除控制字元、拒絕空白、暱稱 ≤ 20 字、內容 ≤ 80 字（以字計算，中文與 emoji 都算 1 字）、拒絕網址（`http`、`www`、`://`、常見網域結尾，含全形寫法）、基本中英文髒話清單。
-- 速率限制：每 IP 每分鐘 3 則成功留言，超過回 429 與 `Retry-After`。被驗證擋下的請求不佔額度。
+- 速率限制：每 IP 每分鐘 3 則成功留言，超過回 429 與 `Retry-After`。被驗證擋下的請求不佔額度。額度是同步佔用的，並發請求不會超過上限。
 - 其他：請求 body 上限 4 KB、資料庫連不上時啟動失敗並以 exit 1 結束（log 不輸出連線字串）、SIGTERM 正常關閉。
 
 **前端**
@@ -46,7 +46,7 @@ src/
   style.css       （改）在檔尾新增許願牆樣式，原有樣式未動
 index.html        （改）按鈕、計數、表單與卡片的 <dialog>、favicon
 vite.config.js    （新）npm run dev 時把 /api 轉給 3000 埠
-test/api.test.js  （新）14 個自動化測試（node --test）
+test/api.test.js  （新）16 個自動化測試（node --test）
 README.md         （新）本機啟動、環境變數、部署、API
 package.json      （改）start / test script、engines node>=22、express、pg
 .gitignore        （改）加上 data
@@ -61,7 +61,7 @@ _qa/              驗收截圖、驗收輸出、驗收腳本
 npm install
 npm run build
 npm start            # http://localhost:3000，未設定 DATABASE_URL 會用 data/wishes.json
-npm test             # 14 個自動化測試
+npm test             # 16 個自動化測試
 ```
 
 瀏覽器驗收腳本（需要服務已啟動；`playwright-core` 不是專案相依套件，要傳入路徑）：
@@ -82,7 +82,7 @@ node _qa/run-qa.mjs <playwright-core 的路徑>
 | POST 一則、GET 拿得到、count 正確 | 通過 | 同上（count 0 → 1，前後空白已去除） |
 | 超長（81 字）、暱稱超長、空白、含網址、髒話被拒 | 通過，皆 400 | 同上 |
 | 速率限制 | 通過，第 4 則回 429 與 `Retry-After: 60` | 同上 |
-| 自動化測試 | 14/14 通過 | `npm test` |
+| 自動化測試 | 16/16 通過 | `npm test` |
 | 瀏覽器驗收（headless Chrome，桌機 1280×800 與手機 390×844） | 27/27 通過 | `_qa/browser-acceptance.txt` |
 | 場景正常 | 通過 | `01-desktop-scene.png`、`09-mobile-scene.png` |
 | 按鈕與表單正常 | 通過 | `02`、`03`、`10-mobile-form.png` |
@@ -97,12 +97,13 @@ node _qa/run-qa.mjs <playwright-core 的路徑>
 驗收途中發現並修掉的問題：
 - **點楓葉後卡片立刻關掉。** 原本在 `pointerup` 開卡片，隨後的 `click` 落在對話框背景上把它關了；點擊位置剛好在卡片範圍內時不會發生，所以第一輪沒測到。已改成在 `click` 開啟，並在驗收腳本加上「點卡片範圍外的楓葉」的檢查（桌機與手機）。
 - **手機畫面太擠。** 60 多片大葉子與光暈疊在窄畫面上一片過曝，已改為直式畫面縮小葉子、調淡光暈。
+- **速率限制的並發競態。** 原本「檢查額度」與「記錄」之間隔著資料庫寫入，同時送出多個請求可以一起通過檢查。已改成同步佔用額度、失敗再歸還，並加了「同時送 12 則只成功 3 則」的測試。這是 commit 後的安全檢查指出的，修正在第二個 commit。
 - **靜態檔路徑穿越回 500。** `/assets/%2e%2e/...` 原本就被擋下，但回的是 500，已改回 403。
 
 ## 已知限制
 
 - **PostgreSQL 未對真實資料庫驗證**（見結論）。TLS 依 `DATABASE_URL` 的 `sslmode` 決定，程式沒有關閉憑證驗證；若 RoamerHost 的資料庫用自簽憑證，需要確認連線字串的寫法。
-- **速率限制在記憶體內**：服務重啟就歸零，多個實例時各算各的。程式設定信任一層反向代理（`trust proxy = 1`）來取得用戶端 IP；如果 RoamerHost 前面不只一層代理，所有人會被當成同一個 IP，變成全站每分鐘 3 則，部署後要實測一次。
+- **速率限制在記憶體內**：服務重啟就歸零，多個實例時各算各的。程式設定信任一層反向代理（`trust proxy = 1`）來取得用戶端 IP；如果 RoamerHost 前面不只一層代理，所有人會被當成同一個 IP，變成全站每分鐘 3 則，部署後要實測一次。反過來，如果服務直接對外、前面沒有代理，用戶端可以偽造 `X-Forwarded-For` 繞過每 IP 限制。規格限定環境變數只有 `DATABASE_URL` 與 `PORT`，所以沒有把代理層數做成可設定；需要的話可以加一個 `TRUST_PROXY`。
 - **過濾很基本**：髒話是固定清單，容易繞過也可能誤擋；網址規則偏嚴，內容裡出現 `http` 這個字或像 `xxx.com` 的寫法都會被拒。沒有審核或刪除留言的後台，要刪只能直接進資料庫。
 - **畫面最多同時顯示 140 片**，超過會移除最舊的；計數顯示的是資料庫總數，所以數字可能大於畫面上的片數。
 - **許願楓葉只能用滑鼠或觸控點開**，鍵盤與螢幕閱讀器使用者讀不到別人的願望（表單本身可以用鍵盤操作）。
