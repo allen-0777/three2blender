@@ -19,7 +19,8 @@ function createLeafGeometry() {
   return new THREE.ShapeGeometry(shape);
 }
 
-const leafGeometry = createLeafGeometry();
+// 許願楓葉（wishLeaves.js）共用同一份輪廓
+export const leafGeometry = createLeafGeometry();
 const leafMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.8,
   side: THREE.DoubleSide,

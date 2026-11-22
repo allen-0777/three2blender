@@ -87,3 +87,377 @@ body {
     animation: none;
   }
 }
+
+/* ---------- 楓葉許願牆 ---------- */
+
+:root {
+  --wish-cream: #fff6e6;
+  --wish-paper: #fff1dc;
+  --wish-ink: #4a1c0c;
+  --wish-ink-soft: #8a5238;
+  --wish-red: #b81f2d;
+  --wish-red-deep: #96172a;
+  --wish-amber: #f5a623;
+  --wish-serif: 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif;
+  --wish-sans: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC',
+    'Microsoft JhengHei', sans-serif;
+}
+
+#scene {
+  /* 點擊楓葉時不要出現觸控反白或被當成捲動 */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wish-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + clamp(18px, 4.5vh, 40px));
+  pointer-events: none;
+  text-align: center;
+  color: var(--wish-cream);
+  font-family: var(--wish-sans);
+  text-shadow: 0 1px 10px rgba(90, 25, 5, 0.7);
+  animation: rise 2.4s 0.5s ease-out both;
+}
+
+.wish-button {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  min-height: 48px;
+  padding: 0.7em 1.5em 0.7em 1.25em;
+  border: 1px solid rgba(255, 246, 230, 0.55);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #c8281e, var(--wish-red));
+  color: var(--wish-cream);
+  font-family: var(--wish-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  box-shadow:
+    0 8px 26px rgba(90, 25, 5, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wish-button:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 30px rgba(90, 25, 5, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.wish-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.wish-button__icon {
+  width: 1.25em;
+  height: 1.25em;
+  fill: #ffd978;
+  filter: drop-shadow(0 0 4px rgba(255, 217, 120, 0.7));
+}
+
+.wish-count,
+.wish-hint,
+.wish-toast {
+  margin: 0;
+}
+
+.wish-count {
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.wish-hint {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.wish-toast {
+  max-width: min(92vw, 26rem);
+  padding: 0.55em 1.1em;
+  border-radius: 999px;
+  background: rgba(74, 28, 12, 0.72);
+  font-size: 0.88rem;
+  letter-spacing: 0.06em;
+  text-shadow: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+
+.wish-toast.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.wish-button:focus-visible,
+.wish-primary:focus-visible,
+.wish-ghost:focus-visible {
+  outline: 3px solid #ffd978;
+  outline-offset: 3px;
+}
+
+/* 對話框（表單與留言卡片共用） */
+.wish-dialog {
+  width: min(92vw, 26rem);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--wish-ink);
+  font-family: var(--wish-sans);
+  overflow: visible;
+}
+
+.wish-dialog::backdrop {
+  background: rgba(60, 20, 8, 0.5);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.wish-dialog[open] {
+  animation: wish-pop 0.28s ease-out both;
+}
+
+.wish-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-height: calc(100dvh - 32px);
+  padding: 1.5rem 1.4rem 1.25rem;
+  overflow-y: auto;
+  border: 1px solid rgba(184, 31, 45, 0.25);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(245, 166, 35, 0.16), transparent 60%),
+    var(--wish-paper);
+  box-shadow: 0 24px 60px rgba(60, 20, 8, 0.5);
+}
+
+.wish-panel h2 {
+  margin: 0;
+  font-family: var(--wish-serif);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--wish-red-deep);
+}
+
+.wish-panel__lead {
+  margin: -0.4rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--wish-ink-soft);
+}
+
+.wish-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wish-field__label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.wish-field__label small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--wish-ink-soft);
+}
+
+.wish-field__counter {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--wish-ink-soft);
+}
+
+.wish-field__counter.is-over {
+  color: var(--wish-red);
+  font-weight: 700;
+}
+
+.wish-field input,
+.wish-field textarea {
+  width: 100%;
+  padding: 0.7em 0.85em;
+  border: 1px solid rgba(138, 82, 56, 0.45);
+  border-radius: 10px;
+  background: #fffaf1;
+  color: var(--wish-ink);
+  font-family: inherit;
+  /* 16px 以上，iOS 才不會在聚焦時自動放大頁面 */
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: none;
+}
+
+.wish-field input::placeholder,
+.wish-field textarea::placeholder {
+  color: rgba(138, 82, 56, 0.6);
+}
+
+.wish-field input:focus-visible,
+.wish-field textarea:focus-visible {
+  outline: 2px solid var(--wish-red);
+  outline-offset: 1px;
+  border-color: var(--wish-red);
+}
+
+.wish-error {
+  margin: 0;
+  padding: 0.55em 0.8em;
+  border-radius: 8px;
+  background: rgba(184, 31, 45, 0.1);
+  color: var(--wish-red-deep);
+  font-size: 0.88rem;
+}
+
+.wish-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+.wish-primary,
+.wish-ghost {
+  min-height: 46px;
+  padding: 0.6em 1.3em;
+  border-radius: 999px;
+  font-family: var(--wish-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wish-primary {
+  border: none;
+  background: linear-gradient(180deg, #c8281e, var(--wish-red));
+  color: var(--wish-cream);
+  box-shadow: 0 6px 16px rgba(150, 23, 42, 0.35);
+}
+
+.wish-primary:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.wish-ghost {
+  border: 1px solid rgba(138, 82, 56, 0.5);
+  background: transparent;
+  color: var(--wish-ink-soft);
+}
+
+.wish-card {
+  gap: 1.1rem;
+  padding-top: 1.8rem;
+}
+
+.wish-card__message {
+  margin: 0;
+  font-family: var(--wish-serif);
+  font-size: 1.25rem;
+  line-height: 1.75;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.wish-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed rgba(138, 82, 56, 0.4);
+  font-size: 0.88rem;
+  color: var(--wish-ink-soft);
+}
+
+.wish-card__nickname {
+  font-weight: 600;
+  color: var(--wish-red-deep);
+  overflow-wrap: anywhere;
+}
+
+.wish-card__nickname::before {
+  content: '— ';
+}
+
+.wish-card__time {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes wish-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 手機：對話框靠上，虛擬鍵盤彈出時不會被遮住 */
+  .wish-dialog {
+    margin-top: max(16px, 9vh);
+  }
+
+  .wish-button {
+    font-size: 1rem;
+  }
+
+  .wish-panel__actions > * {
+    flex: 1;
+  }
+}
+
+@media (max-height: 520px) {
+  .wish-hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wish-bar,
+  .wish-dialog[open] {
+    animation: none;
+  }
+
+  .wish-button,
+  .wish-toast {
+    transition: none;
+  }
+}

@@ -1,0 +1,9 @@
+# PostgreSQL 儲存層 SQL 檢查：使用 pg-mem 3.0.14（記憶體內模擬器，裝在專案外的暫存目錄），不是真正的 PostgreSQL。
+# 以 createPostgresStore({ pool }) 注入模擬的 Pool，經 Express API 走一遍建表 / INSERT ... RETURNING / SELECT / COUNT。
+healthz { status: 'ok', store: 'postgres' }
+count0 { count: 0 }
+post1 [201,{"wish":{"id":1,"nickname":"阿楓","message":"Robert'); DROP TABLE wishes;--","created_at":"2026-11-22T15:43:13.687Z"},"count":1}]
+post2 [201,{"wish":{"id":2,"nickname":"","message":"第二片 🍁","created_at":"2026-11-22T15:43:13.691Z"},"count":2}]
+list {"wishes":[{"id":2,"nickname":"","message":"第二片 🍁","created_at":"2026-11-22T15:43:13.691Z"},{"id":1,"nickname":"阿楓","message":"Robert'); DROP TABLE wishes;--","created_at":"2026-11-22T15:43:13.687Z"}],"count":2}
+after1 {"wishes":[{"id":2,"nickname":"","message":"第二片 🍁","created_at":"2026-11-22T15:43:13.691Z"}],"count":2}
+count { count: 2 }

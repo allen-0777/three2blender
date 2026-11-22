@@ -1,0 +1,35 @@
+PASS  桌機：場景載入，許願楓葉數 = min(留言數, 100)  ({"leaves":64,"count":"已有 64 片楓葉"})
+PASS  桌機：計數顯示「已有 N 片楓葉」  (已有 64 片楓葉)
+      WebGL renderer: ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)
+PASS  桌機：點按鈕開啟表單
+PASS  桌機：空白送出被前端擋下並顯示錯誤  (請寫下你的願望)
+PASS  桌機：超過 80 字計數器變紅
+PASS  桌機：含網址的留言顯示伺服器的拒絕訊息  (留言不能包含網址)
+PASS  桌機：送出成功（201）  (id=65)
+PASS  桌機：送出後多一片特別楓葉、計數 +1  ({"leaves":65,"count":"已有 65 片楓葉"})
+PASS  桌機：表單已關閉
+PASS  桌機：滑到許願楓葉上游標變手指
+PASS  桌機：點擊自己的楓葉跳出卡片（暱稱、內容、時間）  ({"open":true,"nickname":"驗收小幫手","message":"希望這片楓葉平安飄到每個人的螢幕上 🍁","time":"2026年11月22日 晚上11:41","childElements":0})
+PASS  桌機：Esc 關閉卡片
+PASS  桌機：含 HTML 的留言以純文字顯示（textContent，未產生子元素）  ({"open":true,"nickname":"匿名旅人","message":"<b>願世界和平</b>","time":"2026年11月22日 晚上11:36","childElements":0})
+PASS  桌機：未填暱稱顯示「匿名旅人」  (匿名旅人)
+PASS  桌機：點卡片範圍外的楓葉，卡片開啟且維持開啟  (click=(1061,279) 希望這片楓葉平安飄到每個人的螢幕上 🍁)
+PASS  桌機：點背景關閉卡片
+PASS  桌機：點沒有楓葉的地方不會開卡片
+PASS  輪詢：外部送出一則（201）
+PASS  輪詢：約 15 秒內新楓葉自動出現、計數更新（未重新整理）  ({"leaves":66,"count":"已有 66 片楓葉"})
+      桌機 headless 約 60 fps（66 片許願楓葉）
+PASS  手機：場景載入、計數正確  ({"leaves":66,"count":"已有 66 片楓葉"})
+PASS  手機：所有許願楓葉都排在直式畫面範圍內  (66/66)
+PASS  手機：頁面沒有水平捲動
+PASS  手機：表單完整落在畫面內  ({"x":19,"y":75.953125,"width":352,"height":398.34375})
+PASS  手機：輸入框字級 ≥ 16px（iOS 不會自動放大）  (16px)
+PASS  手機：觸控點擊楓葉跳出卡片  ({"open":true,"nickname":"另一位訪客","message":"從別的裝置送來的楓葉","time":"2026年11月22日 晚上11:38","childElements":0})
+PASS  手機：卡片開啟後維持開啟（點擊位置在卡片外，不會被隨後的 click 關掉）  (tap=(48,636))
+PASS  手機：點卡片外的背景可關閉
+
+頁面錯誤／失敗請求：
+  desktop HTTP 400 http://localhost:3000/api/wishes
+  desktop console.error: Failed to load resource: the server responded with a status of 400 (Bad Request)
+
+27/27 項通過

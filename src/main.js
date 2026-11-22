@@ -3,6 +3,8 @@ import { createRng } from './palette.js';
 import { createEnvironment } from './environment.js';
 import { createForest } from './trees.js';
 import { createFallingLeaves, createGroundLeaves } from './leaves.js';
+import { createWishLeaves } from './wishLeaves.js';
+import { initWishWall } from './wishWall.js';
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
@@ -40,14 +42,23 @@ const fallingLeaves = createFallingLeaves({
 });
 scene.add(fallingLeaves.mesh);
 
+// 許願楓葉：每片對應資料庫裡的一則留言
+const wishLeaves = createWishLeaves({ camera, cameraBase: CAMERA_BASE, reducedMotion });
+scene.add(wishLeaves.group);
+
 function resize() {
   const { innerWidth: width, innerHeight: height } = window;
   renderer.setSize(width, height, false);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
+  wishLeaves.layout();
 }
 window.addEventListener('resize', resize);
 resize();
+
+const wishWall = initWishWall({ canvas, camera, wishLeaves });
+// 給除錯與自動化驗收用
+window.__wishWall = { leaves: wishLeaves, ...wishWall };
 
 // 滑鼠視差：pointer 為 -1..1
 const pointer = new THREE.Vector2();
@@ -76,6 +87,9 @@ renderer.setAnimationLoop((now) => {
   camera.position.x += (targetX - camera.position.x) * ease;
   camera.position.y += (targetY - camera.position.y) * ease;
   camera.lookAt(LOOK_AT);
+
+  // 鏡頭定位後再更新，光暈才會正對鏡頭
+  wishLeaves.update(dt, time);
 
   renderer.render(scene, camera);
 });

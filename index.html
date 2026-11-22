@@ -2,17 +2,96 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>楓葉季 Maple Season</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="楓葉許願牆：留下一片屬於你的楓葉，讓願望在楓林裡慢慢飄。" />
+    <meta name="theme-color" content="#f6c796" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-0.6 -0.6 1.2 1.2'%3E%3Cpath fill='%23c8281e' transform='scale(1,-1)' d='M.02-.5V-.3L.25-.36.2-.22.5-.02.4.03.47.2.3.17.27.25.14.12.2.42.1.36 0 .52-.1.36-.2.42-.14.12-.27.25-.3.17-.47.2-.4.03-.5-.02-.2-.22-.25-.36-.02-.3V-.5Z'/%3E%3C/svg%3E"
+    />
+    <title>楓葉季 Maple Season｜楓葉許願牆</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <canvas id="scene" aria-hidden="true"></canvas>
+    <canvas id="scene"></canvas>
     <div class="vignette" aria-hidden="true"></div>
     <main class="title">
       <h1>楓葉季</h1>
       <p>Maple Season</p>
     </main>
+
+    <section class="wish-bar" aria-label="楓葉許願牆">
+      <p id="wish-toast" class="wish-toast" role="status" aria-live="polite"></p>
+      <button id="wish-open" class="wish-button" type="button">
+        <svg class="wish-button__icon" viewBox="-0.6 -0.6 1.2 1.2" aria-hidden="true">
+          <path
+            transform="scale(1,-1)"
+            d="M.02-.5V-.3L.25-.36.2-.22.5-.02.4.03.47.2.3.17.27.25.14.12.2.42.1.36 0 .52-.1.36-.2.42-.14.12-.27.25-.3.17-.47.2-.4.03-.5-.02-.2-.22-.25-.36-.02-.3V-.5Z"
+          />
+        </svg>
+        留下你的楓葉
+      </button>
+      <p id="wish-count" class="wish-count" aria-live="polite">楓葉飄落中…</p>
+      <p class="wish-hint">點一片發光的楓葉，讀讀別人的願望</p>
+    </section>
+
+    <dialog id="wish-form-dialog" class="wish-dialog" aria-labelledby="wish-form-title">
+      <form id="wish-form" class="wish-panel" novalidate>
+        <h2 id="wish-form-title">留下你的楓葉</h2>
+        <p class="wish-panel__lead">寫下一個願望，它會化成一片楓葉飄進楓林。</p>
+
+        <label class="wish-field">
+          <span class="wish-field__label">
+            暱稱<small>選填</small>
+            <span id="wish-nickname-counter" class="wish-field__counter">0/20</span>
+          </span>
+          <input
+            id="wish-nickname"
+            name="nickname"
+            type="text"
+            autocomplete="nickname"
+            placeholder="匿名旅人"
+            enterkeyhint="next"
+          />
+        </label>
+
+        <label class="wish-field">
+          <span class="wish-field__label">
+            願望／留言<small>必填</small>
+            <span id="wish-message-counter" class="wish-field__counter">0/80</span>
+          </span>
+          <textarea
+            id="wish-message"
+            name="message"
+            rows="3"
+            required
+            placeholder="今年秋天，我希望…"
+            enterkeyhint="send"
+          ></textarea>
+        </label>
+
+        <p id="wish-error" class="wish-error" role="alert" hidden></p>
+
+        <div class="wish-panel__actions">
+          <button class="wish-ghost" type="button" data-close>取消</button>
+          <button id="wish-submit" class="wish-primary" type="submit">讓楓葉飄落</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="wish-card-dialog" class="wish-dialog" aria-labelledby="wish-card-nickname">
+      <article class="wish-panel wish-card">
+        <p id="wish-card-message" class="wish-card__message"></p>
+        <footer class="wish-card__meta">
+          <span id="wish-card-nickname" class="wish-card__nickname"></span>
+          <time id="wish-card-time" class="wish-card__time"></time>
+        </footer>
+        <div class="wish-panel__actions">
+          <button class="wish-primary" type="button" data-close>關閉</button>
+        </div>
+      </article>
+    </dialog>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
