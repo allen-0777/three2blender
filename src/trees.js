@@ -165,7 +165,7 @@ function createFoliageMaterial() {
         /* glsl */ `#include <lights_fragment_end>
         // 環境光幾乎照不進樹冠深處；直射光（含透光）也被外層葉子吃掉一部分
         reflectedLight.indirectDiffuse *= vCanopyAo * vCanopyAo;
-        reflectedLight.directDiffuse *= mix( 0.35, 1.0, vCanopyAo );
+        reflectedLight.directDiffuse *= mix( 0.2, 1.0, vCanopyAo );
         reflectedLight.directSpecular *= vCanopyAo * 0.5;`,
       );
   };
@@ -290,7 +290,7 @@ function rebuildFoliage(geometry, rng) {
     const radial = inCluster.length() / cluster.radius; // 0 葉叢中心 … 1 葉叢外緣
     const facing = inCluster.lengthSq() > 1e-6 ? inCluster.normalize().dot(outward) : 0;
     const height = THREE.MathUtils.clamp((p.y - yMin) / (yMax - yMin), 0, 1);
-    let ao = 0.18 + 0.82 * smoothstep(depth, 0.2, 0.95);
+    let ao = 0.1 + 0.9 * smoothstep(depth, 0.25, 0.95);
     ao *= 0.55 + 0.45 * smoothstep(radial, 0.35, 1.0);
     ao *= 0.7 + 0.3 * (0.5 + 0.5 * facing);
     ao *= 0.72 + 0.28 * height;

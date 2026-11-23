@@ -98,7 +98,7 @@ function buildBranch() {
     dummy.position.copy(p).add(new THREE.Vector3(range(rng, -0.04, 0.04), range(rng, -0.08, 0.0), range(rng, -0.04, 0.04)));
     // 葉尖朝下（幾何的葉尖是 +y），對著鏡頭（+z）微傾
     dummy.rotation.set(range(rng, -0.7, 0.5), range(rng, -0.8, 0.8), Math.PI + range(rng, -0.7, 0.7));
-    dummy.scale.setScalar(range(rng, 0.1, 0.15));
+    dummy.scale.setScalar(range(rng, 0.13, 0.19));
     dummy.updateMatrix();
     leaves.setMatrixAt(i, dummy.matrix);
     // 大多是逆光裡的暗紅剪影，約三成被太陽從背後透亮成朱紅
@@ -125,15 +125,28 @@ export function createFraming() {
   const group = new THREE.Group();
   group.add(branch);
   group.name = 'foreground-branch';
+  let baseX = 0;
+  let baseY = 0;
+  let unit = 1;
   return {
     group,
+    /** 微風裡輕輕晃動；滑鼠視差時比背景多移一點（它離鏡頭最近） */
+    update(time, pointer, still = false) {
+      const sway = still ? 0 : Math.sin(time * 0.7) * 0.025 + Math.sin(time * 1.9 + 1.3) * 0.008;
+      branch.rotation.z = -0.12 + sway;
+      branch.position.x = baseX - pointer.x * unit * 0.05;
+      branch.position.y = baseY - pointer.y * unit * 0.035;
+    },
     layout(camera) {
       const halfHeight = DISTANCE * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
       const halfWidth = halfHeight * camera.aspect;
       // 整根樹枝約佔畫面寬度的 22%（直式畫面改用高度為準，免得太細小）
       const scale = Math.max(halfWidth * 0.6, halfHeight * 0.5);
       branch.scale.setScalar(scale);
-      branch.position.set(halfWidth * 1.0, halfHeight * 0.92, -DISTANCE);
+      baseX = halfWidth * 1.0;
+      baseY = halfHeight * 0.92;
+      unit = halfHeight;
+      branch.position.set(baseX, baseY, -DISTANCE);
       branch.rotation.set(0, 0, -0.12);
     },
   };

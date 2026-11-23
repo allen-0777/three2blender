@@ -124,7 +124,7 @@ function createLeafMesh(count, rng, { muted = false } = {}) {
     let hex = pickLeafHue(rng);
     // 飄落的裝飾葉不用淡黃與黃綠，也稍暗一些：不要和發光的許願葉（暖黃系）搶戲或被誤認
     if (muted) while (hex === 0xf0c234 || hex === 0xb9a83a || hex === 0xf29d24) hex = pickLeafHue(rng);
-    color.setHex(hex).multiplyScalar(range(rng, 0.8, 1.1) * (muted ? 0.8 : 1));
+    color.setHex(hex).multiplyScalar(range(rng, 0.8, 1.1) * (muted ? 0.68 : 1));
     mesh.setColorAt(i, color);
   }
   mesh.instanceColor.needsUpdate = true;
@@ -166,7 +166,7 @@ export function createFallingLeaves({ count, rng, speedScale = 1 }) {
       slip: range(rng, 0.5, 1.5),
       windResponse: range(rng, 0.7, 1.3),
       // 第二輪：裝飾落葉變小、大小不一（多數小葉，少數大葉），讓發光的許願葉一眼就分得出來
-      scale: 0.07 + 0.2 * rng() ** 1.7,
+      scale: 0.06 + 0.15 * rng() ** 1.8,
       x: 0,
       y: 0,
       z: 0,
@@ -308,7 +308,7 @@ export function createGroundLeaves({ count, rng, spots = [] }) {
       x = range(rng, AREA.xMin - 4, AREA.xMax + 4);
       z = range(rng, AREA.zMin - 6, AREA.zMax + 4);
     }
-    const scale = 0.09 + 0.17 * rng() ** 1.4;
+    const scale = (0.09 + 0.17 * rng() ** 1.4) * (1 + pile * 0.35);
     groundNormal(x, z, normal);
     // 葉片中央對折後最低點在中肋，抬高一點點讓邊緣翹起、中肋貼地；堆裡的葉子疊高一些
     dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.09), z);

@@ -273,6 +273,9 @@ renderer.setAnimationLoop((now) => {
     camera.position.copy(posed.position);
     camera.lookAt(posed.target);
   }
+  // 前景樹枝只屬於首頁的構圖；驗收用的固定鏡頭（仰望、地面近景）不放
+  framing.group.visible = !posed;
+  framing.update(time, pointer, reducedMotion);
 
   // 鏡頭定位後再更新，光暈才會正對鏡頭
   wishLeaves.update(dt, time);
