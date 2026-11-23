@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SKY, SUN_DIRECTION } from './palette.js';
-import { HAZE_GLSL, createFog } from './atmosphere.js';
+import { HAZE_GLSL, atmosphereUniforms, createFog } from './atmosphere.js';
 import { KOMOREBI_GLSL, komorebiUniforms } from './komorebi.js';
 
 // 天空、太陽、霧、燈光與地面。太陽方向與霧色由 palette.js 的同一組設定決定，
@@ -43,6 +43,7 @@ function createSky() {
     depthWrite: false,
     fog: false,
     uniforms: {
+      ...atmosphereUniforms,
       uTop: { value: new THREE.Color(SKY.top) },
       uMid: { value: new THREE.Color(SKY.mid) },
     },

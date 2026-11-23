@@ -6,15 +6,54 @@ import { ATMOSPHERE, SUN_DIRECTION } from './palette.js';
 // 地平面不再是一條顏色對不上的死線。
 // 做法是覆寫 ShaderChunk，所以必須在任何材質編譯之前 import 這個模組。
 
-const vec3 = (v) => `vec3(${v.map((n) => n.toFixed(4)).join(', ')})`;
-const sun = [SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z];
+// 第三輪（雙場景）：太陽方向與霧色改成「共用 uniform」，不再寫死成 GLSL 常數。
+// 場景二可以切換午後／黃昏／夜晚，所有材質的霧都跟著換；場景一的數值與以前完全相同。
+// 做法：值是普通物件（不是 THREE.Vector3），three 複製內建材質的 uniforms 時只會複製參照，
+// 所以每個材質拿到的都是同一份，改一次就全部生效。
+const shared = (x, y, z) => ({ value: { x, y, z } });
+export const atmosphereUniforms = {
+  uMapleSunDir: shared(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z),
+  uMapleHaze: shared(...ATMOSPHERE.haze),
+  uMapleHazeSun: shared(...ATMOSPHERE.hazeSun),
+  // x：高度衰減；y、z：遠方額外淡出的起訖距離
+  uMapleFogShape: shared(ATMOSPHERE.falloff, ATMOSPHERE.farStart, ATMOSPHERE.farEnd),
+};
 
-/** 天空與霧共用的 GLSL：給視線方向，回傳那個方向的霧色（線性） */
+// 所有內建材質的 uniforms 範本都補上這幾個共用 uniform（必須在任何材質編譯之前）
+for (const shader of Object.values(THREE.ShaderLib)) {
+  if (shader.uniforms && 'fogDensity' in shader.uniforms) Object.assign(shader.uniforms, atmosphereUniforms);
+}
+
+/** 換一組大氣設定：{ sunDirection: {x,y,z}, haze: [r,g,b], hazeSun: [r,g,b], falloff, farStart, farEnd } */
+export function setAtmosphere({ sunDirection, haze, hazeSun, falloff, farStart, farEnd }) {
+  const set = (uniform, x, y, z) => Object.assign(uniform.value, { x, y, z });
+  if (sunDirection) set(atmosphereUniforms.uMapleSunDir, sunDirection.x, sunDirection.y, sunDirection.z);
+  if (haze) set(atmosphereUniforms.uMapleHaze, ...haze);
+  if (hazeSun) set(atmosphereUniforms.uMapleHazeSun, ...hazeSun);
+  const shape = atmosphereUniforms.uMapleFogShape.value;
+  set(atmosphereUniforms.uMapleFogShape, falloff ?? shape.x, farStart ?? shape.y, farEnd ?? shape.z);
+}
+
+/** 場景一（原本的楓林）的大氣設定 */
+export const FOREST_ATMOSPHERE = {
+  sunDirection: { ...SUN_DIRECTION },
+  haze: [...ATMOSPHERE.haze],
+  hazeSun: [...ATMOSPHERE.hazeSun],
+  falloff: ATMOSPHERE.falloff,
+  farStart: ATMOSPHERE.farStart,
+  farEnd: ATMOSPHERE.farEnd,
+};
+
+/** 天空與霧共用的 GLSL：給視線方向，回傳那個方向的霧色（線性）。自訂 ShaderMaterial 要 merge atmosphereUniforms */
 export const HAZE_GLSL = /* glsl */ `
-  const vec3 MAPLE_SUN_DIR = ${vec3(sun)};
-  const vec3 MAPLE_HAZE = ${vec3(ATMOSPHERE.haze)};
-  const vec3 MAPLE_HAZE_SUN = ${vec3(ATMOSPHERE.hazeSun)};
-  vec3 mapleHaze(vec3 dir) {
+  uniform vec3 uMapleSunDir;
+  uniform vec3 uMapleHaze;
+  uniform vec3 uMapleHazeSun;
+  uniform vec3 uMapleFogShape;
+  #define MAPLE_SUN_DIR uMapleSunDir
+  #define MAPLE_HAZE uMapleHaze
+  #define MAPLE_HAZE_SUN uMapleHazeSun
+  vec3 mapleHaze( vec3 dir ) {
     float toSun = max(dot(dir, MAPLE_SUN_DIR), 0.0);
     // 寬的前向散射 + 靠近太陽的窄亮區
     vec3 haze = mix(MAPLE_HAZE, MAPLE_HAZE_SUN, pow(toSun, 6.0) * 0.85);
@@ -59,13 +98,13 @@ THREE.ShaderChunk.fog_fragment = /* glsl */ `
     vec3 fogRay = vFogWorld - cameraPosition;
     float fogDistance = length( fogRay );
     vec3 fogDir = fogRay / max( fogDistance, 0.0001 );
-    float fogSlope = ${ATMOSPHERE.falloff.toFixed(4)} * fogDir.y;
+    float fogSlope = uMapleFogShape.x * fogDir.y;
     fogSlope = abs( fogSlope ) < 0.0001 ? 0.0001 : fogSlope;
-    float fogOptical = fogDensity * exp( - ${ATMOSPHERE.falloff.toFixed(4)} * max( cameraPosition.y, 0.0 ) )
+    float fogOptical = fogDensity * exp( - uMapleFogShape.x * max( cameraPosition.y, 0.0 ) )
       * ( 1.0 - exp( - fogSlope * fogDistance ) ) / fogSlope;
     float fogFactor = 1.0 - exp( - max( fogOptical, 0.0 ) );
     // 霧本身變淡後，遠方另外淡出，地表邊界與林子盡頭不會露出一條線
-    fogFactor = max( fogFactor, smoothstep( ${ATMOSPHERE.farStart.toFixed(1)}, ${ATMOSPHERE.farEnd.toFixed(1)}, fogDistance ) );
+    fogFactor = max( fogFactor, smoothstep( uMapleFogShape.y, uMapleFogShape.z, fogDistance ) );
     gl_FragColor.rgb = mix( gl_FragColor.rgb, mapleHaze( fogDir ), fogFactor );
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
