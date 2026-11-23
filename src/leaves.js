@@ -6,6 +6,7 @@ import { leafTransmission } from './leafShading.js';
 // 飄落範圍（世界座標）。zMax 離鏡頭（z = 12）留兩公尺以上，
 // 避免葉子貼著鏡頭飄過、在景深裡變成一大團色塊。
 const AREA = { xMin: -17, xMax: 17, zMin: -32, zMax: 7.5, top: 12 };
+const DEFAULT_AREA = AREA;
 const TAU = Math.PI * 2;
 
 // 五裂楓葉輪廓的右半邊（葉柄朝下，整體約 1 單位大），左半邊鏡射
@@ -141,7 +142,7 @@ function createLeafMesh(count, rng, { muted = false } = {}) {
  * 葉面越接近直立（側緣朝下）滑得越快、也掉得越快，平躺時像降落傘一樣慢。
  * speedScale 用於 prefers-reduced-motion 時放慢。
  */
-export function createFallingLeaves({ count, rng, speedScale = 1 }) {
+export function createFallingLeaves({ count, rng, speedScale = 1, area: AREA = DEFAULT_AREA, heightFn = groundHeight }) {
   const mesh = createLeafMesh(count, rng, { muted: true });
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
@@ -206,7 +207,7 @@ export function createFallingLeaves({ count, rng, speedScale = 1 }) {
 
       if (leaf.x > AREA.xMax) leaf.x -= width;
       else if (leaf.x < AREA.xMin) leaf.x += width;
-      if (leaf.y < groundHeight(leaf.x, leaf.z) + 0.04) spawn(leaf, AREA.top + rng() * 3);
+      if (leaf.y < heightFn(leaf.x, leaf.z) + 0.04) spawn(leaf, AREA.top + rng() * 3);
 
       // 在邊界與剛出現時縮小，把循環的跳動藏起來
       const edgeFade = Math.min(1, (leaf.x - AREA.xMin) / 1.5, (AREA.xMax - leaf.x) / 1.5);
@@ -272,7 +273,7 @@ const gaussian = (rng) => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(TAU * r
  * 靜止鋪在地面的落葉：貼著地表高度與法線，不懸空。
  * 約八成堆在 spots（成堆成簇、彼此交疊），其餘零星散落。
  */
-export function createGroundLeaves({ count, rng, spots = [] }) {
+export function createGroundLeaves({ count, rng, spots = [], heightFn = groundHeight, normalFn = groundNormal, accept = null, area: AREA = DEFAULT_AREA }) {
   const mesh = createLeafMesh(count, rng);
   mesh.receiveShadow = true;
 
@@ -310,10 +311,17 @@ export function createGroundLeaves({ count, rng, spots = [] }) {
       x = range(rng, AREA.xMin - 4, AREA.xMax + 4);
       z = range(rng, AREA.zMin - 6, AREA.zMax + 4);
     }
+    // 場景二：不放進溪水裡（場景一沒有 accept，亂數序列不變）
+    if (accept && !accept(x, z)) {
+      dummy.scale.setScalar(0);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      continue;
+    }
     const scale = (0.09 + 0.17 * rng() ** 1.4) * (1 + pile * 0.35);
-    groundNormal(x, z, normal);
+    normalFn(x, z, normal);
     // 葉片中央對折後最低點在中肋，抬高一點點讓邊緣翹起、中肋貼地；堆裡的葉子疊高一些
-    dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.09), z);
+    dummy.position.set(x, heightFn(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.09), z);
 
     align.setFromUnitVectors(up, normal);
     spin.setFromAxisAngle(up, rng() * TAU);

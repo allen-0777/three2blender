@@ -14,6 +14,9 @@ export const TIERS = {
     groundLeaves: 9000,
     rays: 'full',
     sparkles: 1,
+    // 場景二：水面倒影的 cube map 解析度（0 = 不拍，用天空近似）與神木的葉片數
+    envSize: 256,
+    giantLeaves: 17000,
   },
   mid: {
     pixelRatioCap: 1.5,
@@ -28,6 +31,8 @@ export const TIERS = {
     fallingLeaves: 280,
     groundLeaves: 6000,
     sparkles: 0.6,
+    envSize: 128,
+    giantLeaves: 12000,
   },
   low: {
     pixelRatioCap: 1.5,
@@ -43,6 +48,9 @@ export const TIERS = {
     fallingLeaves: 200,
     groundLeaves: 3200,
     sparkles: 0.3,
+    // 手機：關掉溪水的環境反射（改用天空與霧色的近似反射）
+    envSize: 0,
+    giantLeaves: 8000,
   },
 };
 

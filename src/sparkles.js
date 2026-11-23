@@ -124,6 +124,10 @@ export function createSparkles({ rng, sun, sunDirection, dust = 1400, gold = 160
       uniforms.uShadowReady.value = map ? 1 : 0;
       uniforms.uShadowMatrix.value.copy(sun.shadow.matrix);
     },
+    /** 場景二切換時段時，太陽（或月亮）換方向 */
+    setSunDirection(direction) {
+      uniforms.uSunDir.value.copy(direction);
+    },
     setLevel(level) {
       geometry.setDrawRange(0, Math.round(total * Math.min(Math.max(level, 0), 1)));
     },

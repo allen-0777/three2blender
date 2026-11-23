@@ -11,6 +11,8 @@ import { FOREGROUND_LAYER } from './post.js';
 const DISTANCE = 1.5;
 /** 右上角被樹枝佔用的範圍（以畫面中心為 0、邊緣為 1 的座標），許願葉會避開 */
 export const KEEP_OUT = { x: 0.52, y: 0.5 };
+/** 鏡射到左上角時（場景二）的範圍 */
+export const KEEP_OUT_LEFT = { ...KEEP_OUT, side: -1 };
 
 /** 錐狀枝條：沿曲線放一圈圈頂點，半徑由 r0 漸細到 r1 */
 function taperedTube(curve, r0, r1, segments = 24, sides = 7) {
@@ -136,6 +138,10 @@ export function createFraming() {
       branch.rotation.z = -0.12 + sway;
       branch.position.x = baseX - pointer.x * unit * 0.05;
       branch.position.y = baseY - pointer.y * unit * 0.035;
+    },
+    /** 場景二：鏡射到左上角（照概念圖的構圖）；許願葉要改用 KEEP_OUT_LEFT */
+    setMirrored(mirrored) {
+      group.scale.x = mirrored ? -1 : 1;
     },
     layout(camera) {
       const halfHeight = DISTANCE * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));

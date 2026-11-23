@@ -185,6 +185,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   const { body, edge, halo } = createMeshes(capacity);
   const group = new THREE.Group();
   group.add(body, edge, halo);
+  const edgeBase = edge.material.color.clone();
+  const haloBase = halo.material.opacity;
 
   /** @type {Array<object>} 依 id 由小到大 */
   const leaves = [];
@@ -193,6 +195,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   let clock = 0;
 
   const motion = reducedMotion ? 0.3 : 1;
+  // 飄落途中額外的位移（公尺，落定時歸零）：場景二讓葉子飄落時略往神木的方向飄
+  const fallBias = new THREE.Vector3();
   // 鏡頭焦距會隨畫面比例調整（main.js），每次 layout 重新取視角
   let halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   // 沒有選取時的對焦距離（沿鏡頭前方的公尺數），見 focusDepth()
@@ -238,7 +242,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       screenY = (leaf.home.y - cameraBase.y) / toScreenY;
     }
     // 避開前景樹枝佔用的右上角（keepOut：畫面座標，中心 0、邊緣 1）
-    if (keepOut && screenX > keepOut.x - 0.08 && screenY > keepOut.y - 0.12) {
+    // side：1 = 右上角（場景一），-1 = 左上角（場景二的前景楓枝在左邊）
+    if (keepOut && screenX * (keepOut.side ?? 1) > keepOut.x - 0.08 && screenY > keepOut.y - 0.12) {
       leaf.home.y = cameraBase.y + (keepOut.y - 0.12 - 0.25 * leaf.v) * toScreenY;
     }
   }
@@ -364,6 +369,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
         leaf.position.x += leaf.startOffset.x * falling + Math.sin(clock * 1.7 + leaf.phase) * 0.7 * falling;
         leaf.position.y += leaf.startOffset.y * falling;
         leaf.position.z += leaf.startOffset.z * falling;
+        leaf.position.addScaledVector(fallBias, falling);
       }
 
       const targetEmphasis = leaf.wish.id === selectedId ? 1 : 0;
@@ -436,6 +442,20 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     },
     update,
     pick: pickWish,
+    /** 前景樹枝佔用的角落（見 placeHome），null 表示不避開 */
+    setKeepOut(next) {
+      keepOut = next;
+      layout();
+    },
+    /** 飄落途中的額外位移（落定時為 0，不影響停留位置與點擊） */
+    setFallBias(x, y, z) {
+      fallBias.set(x, y, z);
+    },
+    /** 邊緣光與光暈的整體強度（夜晚加強，讓許願葉更顯眼） */
+    setGlowBoost(boost) {
+      edge.material.color.copy(edgeBase).multiplyScalar(boost);
+      halo.material.opacity = haloBase * Math.min(boost, 1.6);
+    },
     has: (id) => byId.has(id),
     setSelected(id) {
       selectedId = id;

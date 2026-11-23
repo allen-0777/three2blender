@@ -43,6 +43,23 @@
       </svg>
     </button>
 
+    <nav class="scene-switch" aria-label="場景與時段">
+      <div class="scene-switch__group" role="group" aria-label="切換場景">
+        <button class="scene-switch__button" type="button" data-scene="1" aria-pressed="true" title="場景一：楓林小徑">
+          <span aria-hidden="true">🍁</span> 場景一
+        </button>
+        <button class="scene-switch__button" type="button" data-scene="2" aria-pressed="false" title="場景二：神木小溪">
+          <span aria-hidden="true">🌳</span> 場景二
+        </button>
+      </div>
+      <div class="scene-switch__group scene-switch__time" role="group" aria-label="時段" hidden>
+        <button class="scene-switch__button" type="button" data-time="afternoon" aria-pressed="true">午後</button>
+        <button class="scene-switch__button" type="button" data-time="dusk" aria-pressed="false">黃昏</button>
+        <button class="scene-switch__button" type="button" data-time="night" aria-pressed="false">夜晚</button>
+      </div>
+    </nav>
+    <div class="scene-fade" aria-hidden="true"></div>
+
     <dialog id="wish-form-dialog" class="wish-dialog" aria-labelledby="wish-form-title">
       <form id="wish-form" class="wish-panel" novalidate>
         <h2 id="wish-form-title">留下你的楓葉</h2>

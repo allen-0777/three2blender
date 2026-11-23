@@ -1,5 +1,5 @@
 // 大氣模組會覆寫 three 的霧 shader chunk，必須在任何材質建立之前載入
-import './atmosphere.js';
+import { FOREST_ATMOSPHERE, setAtmosphere } from './atmosphere.js';
 import * as THREE from 'three';
 import { createRng } from './palette.js';
 import { createEnvironment, sunDirection } from './environment.js';
@@ -7,13 +7,14 @@ import { createForest, forestLayout, FOREST_SEED } from './trees.js';
 import { createFallingLeaves, createGroundLeaves, createLitterSpots } from './leaves.js';
 import { createSparkles } from './sparkles.js';
 import { komorebiUniforms } from './komorebi.js';
-import { createFraming, KEEP_OUT } from './framing.js';
+import { createFraming, KEEP_OUT, KEEP_OUT_LEFT } from './framing.js';
 import { createAmbience } from './ambience.js';
 import { createWishLeaves } from './wishLeaves.js';
 import { initWishWall } from './wishWall.js';
 import { createPost } from './post.js';
 import { focalLengthForAspect, verticalFieldOfView } from './lens.js';
 import { TIERS, TIER_ORDER, chooseInitialTier, createFrameWatch } from './quality.js';
+import { createSceneSwitch, initialChoice } from './sceneSwitch.js';
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
@@ -79,6 +80,8 @@ scene.add(groundLeaves);
 const groundLeafCapacity = tier.groundLeaves;
 
 const fallingLeafCapacity = reducedMotion ? 250 : tier.fallingLeaves;
+// 場景二（神木小溪）在第一次切過去時才載入（scene2/index.js）
+let sceneTwo = null;
 const fallingLeaves = createFallingLeaves({
   count: fallingLeafCapacity,
   speedScale: reducedMotion ? 0.4 : 1,
@@ -161,6 +164,7 @@ function applyTier() {
   fallingLeaves.setCount(Math.min(fallingLeafCapacity, reducedMotion ? 250 : tier.fallingLeaves));
   groundLeaves.count = Math.min(groundLeafCapacity, tier.groundLeaves);
   sparkles.setLevel(tier.sparkles);
+  sceneTwo?.applyTier(tier);
   document.documentElement.dataset.quality = tierName;
   resize();
 }
@@ -193,6 +197,104 @@ const wishWall = initWishWall({ canvas, camera, wishLeaves });
 // 環境音：預設靜音，右下角開關被點了才建立 AudioContext（瀏覽器自動播放規則）
 const ambience = createAmbience({ button: document.getElementById('sound-toggle') });
 window.addEventListener('wish:planted', () => ambience.chime());
+
+// ---- 雙場景：場景一（原本的楓林）／場景二（神木小溪，可切午後／黃昏／夜晚） ----
+const sceneOneState = { look: { ...post.look }, exposure: renderer.toneMappingExposure };
+let activeScene = scene;
+let activeIndex = 1;
+// 切換場景、換時段後的幾秒不計入幀時間（shader 編譯與倒影重拍的長幀）
+let frameWatchHold = 0;
+
+async function loadScene(index) {
+  if (index !== 2 || sceneTwo) return;
+  const { createSceneTwo } = await import('./scene2/index.js');
+  const two = await createSceneTwo({
+    renderer,
+    reducedMotion,
+    quality: {
+      textureSize: tier.textureSize,
+      anisotropy: Math.min(tier.anisotropy, renderer.capabilities.getMaxAnisotropy()),
+      shadowMapSize: tier.shadowMapSize,
+      barkNormals: tier.barkNormals,
+      groundLeaves: tier.groundLeaves,
+      fallingLeaves: tier.fallingLeaves,
+      envSize: tier.envSize,
+      giantLeaves: tier.giantLeaves,
+    },
+  });
+  two.applyTier(tier);
+  two.setTime(switcher?.time ?? choice.time);
+  // 先在背景把 shader 編好，淡入時不會卡一下
+  await renderer.compileAsync(two.scene, camera).catch(() => {});
+  setAtmosphere(FOREST_ATMOSPHERE); // setTime 改了共用的大氣；還沒切過去前維持場景一
+  sceneTwo = two;
+}
+
+function applySceneTwoTime(time) {
+  const preset = sceneTwo.setTime(time);
+  post.setSun(sceneTwo.sun);
+  post.setSunDirection(sceneTwo.sunDirection);
+  post.setSunColor(...preset.rays.color);
+  post.setRaysStrength(preset.rays.strength);
+  Object.assign(post.look, sceneOneState.look, preset.look);
+  renderer.toneMappingExposure = preset.exposure;
+  wishLeaves.setGlowBoost(preset.wishGlow);
+  frameWatchHold = performance.now() + 4000;
+}
+
+function activateScene(index, time) {
+  activeIndex = index;
+  activeScene = index === 2 ? sceneTwo.scene : scene;
+  // 許願葉與鏡頭（前景楓枝掛在鏡頭底下）搬到目前的場景；許願資料只有一份，兩邊都看得到、點得開
+  activeScene.add(wishLeaves.group);
+  activeScene.add(camera);
+  // 場景二照概念圖：前景楓枝在左上；許願葉飄落時略往神木的方向飄
+  framing.setMirrored(index === 2);
+  wishLeaves.setKeepOut(index === 2 ? KEEP_OUT_LEFT : KEEP_OUT);
+  wishLeaves.setFallBias(0, index === 2 ? 0.6 : 0, index === 2 ? 3.5 : 0);
+  if (index === 2) {
+    applySceneTwoTime(time);
+  } else {
+    setAtmosphere(FOREST_ATMOSPHERE);
+    post.setSun(environment.sun);
+    post.setSunDirection(sunDirection);
+    post.setSunColor(1.0, 0.62, 0.32);
+    post.setRaysStrength(0.075);
+    Object.assign(post.look, sceneOneState.look);
+    renderer.toneMappingExposure = sceneOneState.exposure;
+    wishLeaves.setGlowBoost(1);
+  }
+  renderer.shadowMap.needsUpdate = true;
+  frameWatchHold = performance.now() + 4000;
+}
+
+const choice = initialChoice(params);
+const switcher = createSceneSwitch({
+  root: document.querySelector('.scene-switch'),
+  fade: document.querySelector('.scene-fade'),
+  initial: choice,
+  reducedMotion,
+  load: loadScene,
+  activate: activateScene,
+  setTime: (time) => sceneTwo && applySceneTwoTime(time),
+});
+window.__scenes = {
+  get current() {
+    return activeIndex;
+  },
+  get time() {
+    return activeIndex === 2 ? switcher.time : null;
+  },
+  get busy() {
+    return switcher.busy;
+  },
+  ready: switcher.ready,
+  switchTo: (index) => switcher.switchTo(index),
+  setTime: (time) => switcher.setTime(time),
+  get two() {
+    return sceneTwo;
+  },
+};
 // 給除錯與自動化驗收用
 window.__wishWall = { leaves: wishLeaves, ...wishWall };
 window.__visual = {
@@ -211,6 +313,9 @@ window.__visual = {
   look: post.look,
   renderer,
   scene,
+  get activeScene() {
+    return activeScene;
+  },
   ambience,
   /** 驗收用：固定鏡頭位置、注視點與（可選）對焦距離；null 還原成預設的滑鼠視差鏡頭 */
   setPose(pose) {
@@ -243,6 +348,11 @@ if (!reducedMotion) {
 }
 
 const formDialog = document.getElementById('wish-form-dialog');
+const cardDialog = document.getElementById('wish-card-dialog');
+// 場景二的推軌：往前推的距離（公尺）與已經走過的時間
+const DOLLY_DISTANCE = 1.8;
+let dollyClock = 0;
+const lookTarget = new THREE.Vector3();
 const drawingSize = new THREE.Vector2();
 let previous = performance.now();
 let frame = 0;
@@ -254,22 +364,31 @@ renderer.setAnimationLoop((now) => {
   // 表單開著（使用者在打字）時畫面減半更新，把主執行緒與 GPU 讓給輸入
   pendingDt += elapsed;
   if (formDialog.open && frame % 2 === 1) return;
-  if (!initial.forced && !formDialog.open) frameWatch.sample(elapsed);
+  if (!initial.forced && !formDialog.open && !switcher.busy && now > frameWatchHold) frameWatch.sample(elapsed);
 
   // 分頁切回來時避免一次跳一大步
   const dt = Math.min(pendingDt / 1000, 0.05);
   pendingDt = 0;
   const time = now / 1000;
 
-  fallingLeaves.update(dt, time);
+  if (activeIndex === 1) fallingLeaves.update(dt, time);
 
-  const drift = reducedMotion ? 0 : Math.sin(time * 0.15) * 0.25;
-  const targetX = CAMERA_BASE.x + pointer.x * 0.9 + drift;
-  const targetY = CAMERA_BASE.y + pointer.y * 0.35;
+  // 場景二：沿小路非常緩慢地往前推、再退回來（60 秒一個循環），帶一點左右晃動。
+  // 卡片或表單開著時時鐘停住，鏡頭就停在原地；prefers-reduced-motion 時完全不動
+  const still = reducedMotion || formDialog.open || cardDialog.open || posed;
+  if (activeIndex === 2 && !still) dollyClock += dt;
+  const dolly = activeIndex === 2 && !reducedMotion ? (1 - Math.cos((dollyClock * Math.PI * 2) / 60)) / 2 : 0;
+  const dollySway = activeIndex === 2 && !reducedMotion ? Math.sin(dollyClock * 0.21) * 0.22 : 0;
+  const drift = reducedMotion || activeIndex === 2 ? 0 : Math.sin(time * 0.15) * 0.25;
+  const targetX = CAMERA_BASE.x + pointer.x * 0.9 + drift + dollySway;
+  const targetY = CAMERA_BASE.y + pointer.y * 0.35 + (activeIndex === 2 ? Math.sin(dollyClock * 0.37) * 0.04 : 0);
+  const targetZ = CAMERA_BASE.z - dolly * DOLLY_DISTANCE;
   const ease = 1 - Math.exp(-dt * 2.5);
   camera.position.x += (targetX - camera.position.x) * ease;
   camera.position.y += (targetY - camera.position.y) * ease;
-  camera.lookAt(LOOK_AT);
+  camera.position.z += (targetZ - camera.position.z) * ease;
+  lookTarget.set(LOOK_AT.x + dollySway * 0.3, LOOK_AT.y, LOOK_AT.z - dolly * DOLLY_DISTANCE);
+  camera.lookAt(lookTarget);
   if (posed) {
     camera.position.copy(posed.position);
     camera.lookAt(posed.target);
@@ -285,8 +404,15 @@ renderer.setAnimationLoop((now) => {
   const focusTarget = posed?.focus ?? wishLeaves.focusDepth();
   lens.focus += (focusTarget - lens.focus) * (1 - Math.exp(-dt * 2.2));
 
-  komorebiUniforms.uKomorebiTime.value = reducedMotion ? 0 : time;
-  sparkles.update(reducedMotion ? time * 0.3 : time, camera, renderer.getDrawingBufferSize(drawingSize).y);
+  renderer.getDrawingBufferSize(drawingSize);
+  if (activeIndex === 1) {
+    komorebiUniforms.uKomorebiTime.value = reducedMotion ? 0 : time;
+    sparkles.update(reducedMotion ? time * 0.3 : time, camera, drawingSize.y);
+  } else {
+    sceneTwo.update(dt, time, camera, drawingSize.y);
+    // 換時段後（陰影已更新）重拍水面倒影；許願葉不拍進去
+    sceneTwo.updateReflections([wishLeaves.group]);
+  }
 
-  post.render(scene, camera, lens);
+  post.render(activeScene, camera, lens);
 });

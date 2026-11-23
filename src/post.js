@@ -328,7 +328,9 @@ const pass = (fragmentShader, uniforms, extra = {}) =>
  * 建立後期管線。float render target 不支援時 supported 為 false，
  * render() 會退回直接畫到螢幕（仍有 renderer 的 tone mapping）。
  */
-export function createPost(renderer, { sunDirection }) {
+export function createPost(renderer, { sunDirection: initialSun }) {
+  // 自己保留一份：場景切換時改這份，不動 environment.js 匯出的向量
+  const sunDirection = initialSun.clone();
   const supported =
     renderer.capabilities.isWebGL2 !== false &&
     (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
@@ -543,6 +545,18 @@ export function createPost(renderer, { sunDirection }) {
     /** 體積光柱用的太陽（DirectionalLight，需開陰影） */
     setSun(light) {
       sunLight = light;
+    },
+
+    /** 光柱用的太陽方向、顏色與強度（場景二會隨時段改變；方向用 copy，避免共用外部的向量） */
+    setSunDirection(direction) {
+      sunDirection.copy(direction);
+      volumeUniforms.uSunDir.value.copy(direction);
+    },
+    setSunColor(r, g, b) {
+      volumeUniforms.uSunColor.value.setRGB(r, g, b);
+    },
+    setRaysStrength(value) {
+      volumeUniforms.uIntensity.value = value;
     },
 
     /** 切換效果與輔助 pass 的解析度比例（畫質分級用） */

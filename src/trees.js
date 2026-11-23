@@ -13,7 +13,7 @@ const MESH_NAME = /^Maple_(\d+)_(Trunk|Foliage)/;
 
 // 樹幹：GLB 沒有 UV，用世界座標三向投影（triplanar）貼上樹皮。
 // 側面投影的 V 軸是世界 Y，樹皮的直向裂紋會沿著樹幹走。
-function createTrunkMaterial({ barkNormals }) {
+export function createTrunkMaterial({ barkNormals }) {
   const material = new THREE.MeshStandardMaterial({ color: 0x3a2317, roughness: 1 });
   const uniforms = {
     uBarkMap: { value: null },
@@ -126,16 +126,16 @@ function createTrunkMaterial({ barkNormals }) {
 // 第二輪：每片葉子帶一個 AO 值（越深入樹冠越暗），以及它在樹冠裡的方位（aCrown），
 // 背向太陽那一側的葉子（也就是逆光時面向鏡頭的那一側）再暗一些；陰影幾乎全部保留，
 // 葉層之間的明暗層次交給陰影貼圖，不再把內部打平。
-function createFoliageMaterial() {
+export function createFoliageMaterial({ sunWorld = null, ...options } = {}) {
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     roughness: 0.95,
     side: THREE.DoubleSide,
   });
-  const transmission = leafTransmission({ transmit: 1.6, forward: 3.2, shadowKeep: 0.94, layers: 0.09 });
+  const transmission = leafTransmission({ transmit: 1.6, forward: 3.2, shadowKeep: 0.94, layers: 0.09, sunWorld, ...options });
   material.onBeforeCompile = (shader) => {
     transmission(shader);
-    shader.uniforms.uCanopySun = { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) };
+    shader.uniforms.uCanopySun = sunWorld ?? { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) };
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
@@ -211,7 +211,7 @@ const smoothstep = (x, a, b) => THREE.MathUtils.smoothstep(x, a, b);
  *  3. 每個葉叢再補 EXTRA_PER_CLUSTER 片小葉，越靠葉叢內側越暗。
  * 回傳新的 BufferGeometry（position、normal、color、aAo、aCrown）。
  */
-function rebuildFoliage(geometry, rng) {
+function rebuildFoliage(geometry, rng, pickHue = pickLeafHue) {
   const index = geometry.index;
   const position = geometry.attributes.position;
   const normal = geometry.attributes.normal;
@@ -301,7 +301,7 @@ function rebuildFoliage(geometry, rng) {
   const original = new THREE.Color();
   function leafColor(p, originalColor) {
     // 一半以上來自新色相分布，保留一點原本變體（樹與樹之間）的色調
-    color.setHex(pickLeafHue(rng)).lerp(originalColor, 0.3);
+    color.setHex(pickHue(rng)).lerp(originalColor, 0.3);
     // 每片微差：亮度與色相
     const hsl = {};
     color.getHSL(hsl);
@@ -405,10 +405,22 @@ function rebuildFoliage(geometry, rng) {
   return rebuilt;
 }
 
-/** 載入 GLB，回傳 [{ trunk: BufferGeometry, foliage: BufferGeometry }, ...] */
-async function loadVariants() {
-  const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
-  gltf.scene.updateMatrixWorld(true);
+let gltfPromise = null;
+/** GLB 只下載、解析一次（場景二用同一份模型換葉色） */
+function loadModel() {
+  gltfPromise ??= new GLTFLoader().loadAsync(MODEL_URL).then((gltf) => {
+    gltf.scene.updateMatrixWorld(true);
+    return gltf;
+  });
+  return gltfPromise;
+}
+
+/**
+ * 載入 GLB，回傳 [{ trunk: BufferGeometry, foliage: BufferGeometry }, ...]
+ * pickHue：（可選）葉色挑選函式 (rng) => hex，場景二的銀杏、帶綠楓樹用；seed 讓不同樹種的葉色序列不同
+ */
+export async function loadVariants({ pickHue = pickLeafHue, seed = 1000 } = {}) {
+  const gltf = await loadModel();
 
   const variants = [];
   gltf.scene.traverse((child) => {
@@ -419,7 +431,7 @@ async function loadVariants() {
     variants[index] ??= {};
     variants[index][part] = child.geometry.clone().applyMatrix4(child.matrixWorld);
     if (part === 'foliage') {
-      const rebuilt = rebuildFoliage(variants[index][part], createRng(1000 + index));
+      const rebuilt = rebuildFoliage(variants[index][part], createRng(seed + index), pickHue);
       if (rebuilt) variants[index][part] = rebuilt;
       else {
         // 找不到葉叢（模型格式不同）時保留原幾何，AO 一律 1
@@ -473,13 +485,13 @@ function layoutTrees(rng) {
   return placements;
 }
 
-function createInstances(geometry, material, placements, tint) {
+export function createInstances(geometry, material, placements, tint, heightFn = groundHeight) {
   const mesh = new THREE.InstancedMesh(geometry, material, placements.length);
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
   placements.forEach((p, i) => {
     // 根部略沉進地表，避免緩坡上露出樹幹底面
-    dummy.position.set(p.x, groundHeight(p.x, p.z) - 0.06, p.z);
+    dummy.position.set(p.x, heightFn(p.x, p.z) - 0.06, p.z);
     dummy.rotation.set(p.leanX ?? 0, p.rotation, p.leanZ ?? 0);
     dummy.scale.setScalar(p.scale);
     dummy.updateMatrix();

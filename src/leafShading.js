@@ -40,8 +40,9 @@ void RE_Direct_Leaf( const in IncidentLight directLight, const in vec3 geometryP
  * shadowKeep：這個材質接收平行光陰影的比例（樹冠內部互相遮蔽時留一點光穿過去）。
  * layers：在陰影裡仍能穿過多層葉片的透光比例（0..1，只作用在太陽上）。
  * lightOffset：查陰影時沿太陽方向外推的距離（公尺），消除薄葉片的自我遮蔽格紋。
+ * sunWorld：（可選）共用的 { value: Vector3 } uniform；場景二的太陽會隨時段改變方向。
  */
-export function leafTransmission({ transmit = 0.6, forward = 1.5, shadowKeep = 1, layers = 0, lightOffset = 0.12 } = {}) {
+export function leafTransmission({ transmit = 0.6, forward = 1.5, shadowKeep = 1, layers = 0, lightOffset = 0.12, sunWorld = null } = {}) {
   return (shader) => {
     // 薄葉片雙面都會進陰影貼圖，自己遮自己會出現格紋（shadow acne）。
     // 查陰影時把點沿著光的方向往外推一小段（只對葉片材質），葉子不會再擋到自己。
@@ -55,7 +56,7 @@ export function leafTransmission({ transmit = 0.6, forward = 1.5, shadowKeep = 1
             '#include <shadowmap_vertex>',
             chunk.replace(marker, `${marker}\n\t\t\tshadowWorldPosition.xyz += uLeafSunWorld * ${lightOffset.toFixed(3)};`),
           );
-        shader.uniforms.uLeafSunWorld = { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) };
+        shader.uniforms.uLeafSunWorld = sunWorld ?? { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) };
       }
     }
     shader.uniforms.uLeafTransmit = { value: transmit };
