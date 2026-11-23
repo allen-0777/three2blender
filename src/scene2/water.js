@@ -3,7 +3,7 @@ import { createRng, pickLeafHue, range } from '../palette.js';
 import { atmosphereUniforms } from '../atmosphere.js';
 import { bentLeafGeometry } from '../leaves.js';
 import { LANTERN_GLSL, lanternUniforms } from './materials.js';
-import { LANTERNS, WATER_LEVEL, creekCenter, creekHalfWidth } from './terrain.js';
+import { LANTERNS, WATER_LEVEL, creekCenter, creekHalfWidth, groundHeight2 } from './terrain.js';
 
 // 小溪水面：細碎的流動波紋（解析的正弦組合，取梯度當法線）、Fresnel 反射、太陽（月亮）的閃光。
 // 反射用環境 cube map：在水面上方拍一次整個場景（載入、換時段時各拍一次），
@@ -15,7 +15,10 @@ const VERTEX = /* glsl */ `
   #include <common>
   #include <fog_pars_vertex>
   varying vec3 vWorld;
+  varying float vDepth;
+  attribute float waterDepth;
   void main() {
+    vDepth = waterDepth;
     vec4 world = modelMatrix * vec4( position, 1.0 );
     vWorld = world.xyz;
     vec4 mvPosition = viewMatrix * world;
@@ -39,6 +42,7 @@ const FRAGMENT = /* glsl */ `
   #include <fog_pars_fragment>
   ${LANTERN_GLSL}
   varying vec3 vWorld;
+  varying float vDepth;
 
   // 波紋：數個方向的正弦，整體順著溪往 +x 流；回傳高度對 x、z 的偏微分
   vec2 waveSlope( vec2 p, float t ) {
@@ -49,9 +53,10 @@ const FRAGMENT = /* glsl */ `
       float a = fi * 1.7 + 0.4;
       vec2 d = normalize( vec2( cos( a ) + 1.4, sin( a ) ) );
       float k = 2.2 + fi * 1.55;
-      float amp = 0.0032 / ( 1.0 + fi * 0.8 );
+      float amp = 0.009 / ( 1.0 + fi * 0.8 );
       float phase = dot( d, p ) * k - t * ( 0.8 + fi * 0.35 ) + fi * 2.1;
-      g += d * k * amp * cos( phase );
+      float footprint = length( fwidth( p ) ) * k;
+      g += d * k * amp * cos( phase ) * ( 1.0 - smoothstep( 0.4, 2.0, footprint ) );
     }
     return g;
   }
@@ -70,7 +75,7 @@ const FRAGMENT = /* glsl */ `
     vec3 reflected;
     if ( uHasEnv > 0.5 ) {
       // 波紋越碎反射越糊：用 mip bias 模擬
-      reflected = texture( tEnv, R, 3.0 ).rgb;
+      reflected = texture( tEnv, R, 1.2 ).rgb;
     } else {
       // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
       // 暗色的倒影（對岸樹林）為底，只有遠處的水面帶一點天空色；細碎的波光讓水和地面分得開
@@ -80,7 +85,7 @@ const FRAGMENT = /* glsl */ `
     }
     reflected = min( reflected, vec3( 1.6 ) );
     float fresnel = 0.02 + 0.98 * pow( 1.0 - max( dot( N, V ), 0.0 ), 5.0 );
-    fresnel = mix( 0.2, 0.92, fresnel );
+    fresnel = mix( 0.12, 0.94, fresnel );
     vec3 color = mix( uBody, reflected, fresnel );
     // 燈籠照在水面上，以及燈籠在水裡的倒影（波紋把它拉成一條條的暖光）
     color += uBody * lanternLight( vWorld, N ) * 0.8;
@@ -94,8 +99,11 @@ const FRAGMENT = /* glsl */ `
     }
     // 太陽（月亮）在波紋上的閃光
     float sunDot = max( dot( R, uSunDirW ), 0.0 );
-    color += uSunColorW * ( pow( sunDot, 1200.0 ) * 8.0 + pow( sunDot, 120.0 ) * 0.15 ) * uGlitter;
-    gl_FragColor = vec4( color, 1.0 );
+    color += uSunColorW * ( pow( sunDot, 600.0 ) * 2.0 + pow( sunDot, 120.0 ) * 0.15 ) * uGlitter;
+    // 幾何頂點取實際溪床深度：近岸透出底色，掠射角保留反射。
+    float depthOpacity = 1.0 - exp( -max( vDepth, 0.0 ) * 5.0 );
+    float shore = smoothstep( 0.0, 0.045, vDepth );
+    gl_FragColor = vec4( color, shore * mix( depthOpacity, 1.0, fresnel ) );
     #include <fog_fragment>
   }
 `;
@@ -104,14 +112,17 @@ const FRAGMENT = /* glsl */ `
 function createWaterGeometry() {
   const xs = [];
   for (let x = -70; x <= 70; x += 0.6) xs.push(x);
-  const rows = 8;
+  const rows = 24;
   const positions = [];
+  const depths = [];
   const index = [];
   xs.forEach((x, i) => {
     const c = creekCenter(x);
     const hw = creekHalfWidth(x) * 1.35 + 0.6;
     for (let r = 0; r <= rows; r++) {
-      positions.push(x, WATER_LEVEL, c - hw + (2 * hw * r) / rows);
+      const z = c - hw + (2 * hw * r) / rows;
+      positions.push(x, WATER_LEVEL, z);
+      depths.push(Math.max(0, WATER_LEVEL - groundHeight2(x, z)));
     }
     if (i === 0) return;
     for (let r = 0; r < rows; r++) {
@@ -122,6 +133,7 @@ function createWaterGeometry() {
   });
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  g.setAttribute('waterDepth', new THREE.Float32BufferAttribute(depths, 1));
   g.setIndex(index);
   g.computeBoundingSphere();
   return g;
@@ -202,7 +214,7 @@ export function createWater({ envSize = 256, leafCount = 60, mirrorFrom = new TH
     uSkyTint: { value: new THREE.Color(0.3, 0.4, 0.55) },
     uGlitter: { value: 1 },
   };
-  const material = new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: FRAGMENT, uniforms, fog: true });
+  const material = new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: FRAGMENT, uniforms, fog: true, transparent: true, depthWrite: false });
   const water = new THREE.Mesh(createWaterGeometry(), material);
   water.name = 'creek';
   water.receiveShadow = false;
