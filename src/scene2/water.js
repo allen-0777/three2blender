@@ -53,7 +53,7 @@ const FRAGMENT = /* glsl */ `
       float a = fi * 1.7 + 0.4;
       vec2 d = normalize( vec2( cos( a ) + 1.4, sin( a ) ) );
       float k = 2.2 + fi * 1.55;
-      float amp = 0.009 / ( 1.0 + fi * 0.8 );
+      float amp = 0.0055 / ( 1.0 + fi * 0.8 );
       float phase = dot( d, p ) * k - t * ( 0.8 + fi * 0.35 ) + fi * 2.1;
       float footprint = length( fwidth( p ) ) * k;
       g += d * k * amp * cos( phase ) * ( 1.0 - smoothstep( 0.4, 2.0, footprint ) );
@@ -74,8 +74,8 @@ const FRAGMENT = /* glsl */ `
 
     vec3 reflected;
     if ( uHasEnv > 0.5 ) {
-      // 波紋越碎反射越糊：用 mip bias 模擬
-      reflected = texture( tEnv, R, 1.2 ).rgb;
+      // 固定低階 mip 過濾樹葉倒影，避免高對比輪廓像油膜般扭曲
+      reflected = textureLod( tEnv, R, 2.3 ).rgb;
     } else {
       // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
       // 暗色的倒影（對岸樹林）為底，只有遠處的水面帶一點天空色；細碎的波光讓水和地面分得開
