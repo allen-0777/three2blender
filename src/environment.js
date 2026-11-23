@@ -281,9 +281,9 @@ function createLights({ shadowMapSize }) {
   sun.castShadow = true;
   sun.shadow.mapSize.set(shadowMapSize, shadowMapSize);
   // r187 的 PCFShadowMap 已是 Vogel disk 柔邊，radius 決定半影寬度
-  sun.shadow.radius = 4;
-  sun.shadow.bias = -0.0012;
-  sun.shadow.normalBias = 0.1;
+  sun.shadow.radius = shadowMapSize > 2048 ? 5 : 2.5;
+  sun.shadow.bias = -0.00035;
+  sun.shadow.normalBias = 0.06;
   const cam = sun.shadow.camera;
   cam.left = -34;
   cam.right = 34;

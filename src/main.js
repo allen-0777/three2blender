@@ -16,6 +16,13 @@ import { focalLengthForAspect, verticalFieldOfView } from './lens.js';
 import { TIERS, TIER_ORDER, chooseInitialTier, createFrameWatch } from './quality.js';
 import { createSceneSwitch, initialChoice } from './sceneSwitch.js';
 
+// r187 的 PCF 原本以螢幕像素旋轉五點樣本；鏡頭移動時會換一組陰影。
+// 固定旋轉角保留硬體線性 PCF、相同取樣數，讓陰影跟著世界而非螢幕。
+THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fragment.replace(
+  'float phi = interleavedGradientNoise( gl_FragCoord.xy ) * PI2;',
+  'float phi = 2.39996323;',
+);
+
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
 const params = new URLSearchParams(window.location.search);

@@ -9,7 +9,7 @@ export const TIERS = {
     textureSize: '2k',
     anisotropy: 8,
     barkNormals: true,
-    shadowMapSize: 2048,
+    shadowMapSize: 4096,
     fallingLeaves: 380,
     groundLeaves: 9000,
     rays: 'full',

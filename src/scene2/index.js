@@ -105,9 +105,9 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   sun.target.position.set(0, 0, -12);
   sun.castShadow = true;
   sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-  sun.shadow.radius = 4;
-  sun.shadow.bias = -0.0012;
-  sun.shadow.normalBias = 0.1;
+  sun.shadow.radius = quality.shadowMapSize > 2048 ? 5 : 2.5;
+  sun.shadow.bias = -0.00035;
+  sun.shadow.normalBias = 0.06;
   Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 1, far: 240 });
   const fill = new THREE.DirectionalLight(0xffffff, 0.2);
   fill.position.set(10, 8, 20);

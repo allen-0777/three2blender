@@ -35,7 +35,7 @@ export const KOMOREBI_GLSL = /* glsl */ `
    * 兩種圖樣共用同一次投影與 domain warp（地面每個像素都要算，盡量省）。
    */
   vec3 komorebi( vec3 worldPos, vec3 lit, vec3 open, float cover ) {
-    if ( cover < 0.01 ) return lit;
+
     // 沿太陽方向投到樹冠高度的平面
     vec2 q = worldPos.xz + KOMOREBI_SUN.xz * ( ( 4.2 - worldPos.y ) / KOMOREBI_SUN.y );
     float t = uKomorebiTime;
@@ -43,15 +43,19 @@ export const KOMOREBI_GLSL = /* glsl */ `
     vec2 sway = vec2( sin( t * 0.9 + q.y * 0.35 ), cos( t * 0.7 + q.x * 0.31 ) ) * 0.08;
     // domain warp：打散光斑的排列，不會一列一列像蓋章
     vec2 p = q * 2.6 + sway + vec2( komorebiNoise( q * 0.7 ), komorebiNoise( q * 0.7 + 5.2 ) ) * 1.8;
+    // 導數是程序圖樣的像素足跡：遠處細節回歸平均，等同解析 mip 過濾。
+    float footprint = max( length( dFdx( p ) ), length( dFdy( p ) ) );
+    float detail = 1.0 - smoothstep( 0.15, 0.75, footprint );
     float a = komorebiNoise( p );
-    float b = komorebiNoise( p * 2.4 + 7.1 + sway * 2.0 );
+    float b = mix( 0.5, komorebiNoise( p * 2.4 + 7.1 + sway * 2.0 ), detail );
     float gaps = a * 0.6 + b * 0.4;
     // 第二組（陰影裡的小光斑）用同一組雜訊換個組合，不再多算
     float gaps2 = a * 0.35 + b * 0.65;
-    float dapple = mix( 0.3, 1.5, smoothstep( 0.5, 0.58, gaps ) );
-    vec3 spots = open * smoothstep( 0.68, 0.76, gaps2 ) * 0.9;
+    float aa = min( 0.18, footprint * 0.22 );
+    float dapple = mix( 0.3, 1.5, smoothstep( 0.5 - aa, 0.58 + aa, gaps ) );
+    vec3 spots = open * smoothstep( 0.68 - aa, 0.76 + aa, gaps2 ) * 0.9;
     vec3 shade = max( open - lit, vec3( 0.0 ) );
     float shaded = dot( shade, vec3( 0.333 ) ) / max( dot( open, vec3( 0.333 ) ), 1e-4 );
-    return mix( lit, lit * dapple + spots * shaded, cover );
+    return mix( lit, lit * dapple + spots * shaded, cover * detail );
   }
 `;
