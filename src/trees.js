@@ -133,6 +133,47 @@ function createFoliageMaterial() {
   return material;
 }
 
+/**
+ * 樹冠網格裡每個葉叢中心有一顆低面數的實心團塊（generate_trees.py 原本用來擋葉片之間的空隙），
+ * 其餘是一片片扇形三角化的葉子。樹冠材質把每個面都當成會透光的薄葉片，
+ * 逆光時團塊朝鏡頭的那一面整片被「穿透光」打亮，看起來像紅燈籠。
+ * 團塊與葉片在索引上互不相連，而且固定是 12 個頂點、20 個三角形的二十面體，
+ * 所以用連通元件找出來，直接從索引裡拿掉（GLB 原檔不動）。回傳拿掉的團塊數。
+ */
+function stripFoliageCores(geometry) {
+  const index = geometry.index;
+  if (!index) return 0;
+  const count = geometry.attributes.position.count;
+  const parent = new Int32Array(count);
+  for (let i = 0; i < count; i++) parent[i] = i;
+  const find = (i) => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]];
+      i = parent[i];
+    }
+    return i;
+  };
+  for (let t = 0; t < index.count; t += 3) {
+    const a = find(index.getX(t));
+    parent[find(index.getX(t + 1))] = a;
+    parent[find(index.getX(t + 2))] = a;
+  }
+  const vertices = new Int32Array(count);
+  const triangles = new Int32Array(count);
+  for (let i = 0; i < count; i++) vertices[find(i)] += 1;
+  for (let t = 0; t < index.count; t += 3) triangles[find(index.getX(t))] += 1;
+
+  const kept = [];
+  let removed = 0;
+  for (let t = 0; t < index.count; t += 3) {
+    const root = find(index.getX(t));
+    if (vertices[root] === 12 && triangles[root] === 20) removed += 1;
+    else kept.push(index.getX(t), index.getX(t + 1), index.getX(t + 2));
+  }
+  if (removed > 0) geometry.setIndex(kept);
+  return removed / 20;
+}
+
 /** 載入 GLB，回傳 [{ trunk: BufferGeometry, foliage: BufferGeometry }, ...] */
 async function loadVariants() {
   const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
@@ -146,6 +187,7 @@ async function loadVariants() {
     const part = match[2].toLowerCase();
     variants[index] ??= {};
     variants[index][part] = child.geometry.clone().applyMatrix4(child.matrixWorld);
+    if (part === 'foliage') stripFoliageCores(variants[index][part]);
   });
 
   const complete = variants.filter((v) => v?.trunk && v?.foliage);

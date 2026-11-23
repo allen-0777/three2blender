@@ -17,6 +17,13 @@ const HALF_OUTLINE = [
 // 葉脈匯集處（葉柄接葉身的位置）
 const VEIN_BASE = [0, -0.28];
 
+/** 完整輪廓（逆時針），許願楓葉的邊緣光用（wishLeaves.js） */
+export const LEAF_OUTLINE = [
+  ...HALF_OUTLINE,
+  ...HALF_OUTLINE.slice(0, -1).reverse().map(([x, y]) => [-x, y]),
+];
+export const LEAF_VEIN_BASE = VEIN_BASE;
+
 /** 平面輪廓：許願楓葉用（wishLeaves.js） */
 function createFlatLeafGeometry() {
   const shape = new THREE.Shape();

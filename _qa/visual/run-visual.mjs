@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const [corePath, base = 'http://localhost:3000'] = process.argv.slice(2);
 const { chromium } = createRequire(import.meta.url)(path.resolve(corePath));
-const out = path.dirname(fileURLToPath(import.meta.url));
+// 截圖預設寫在本目錄；設 QA_OUT 可改寫到別處（例如 _qa/visual/fix1，不覆蓋既有截圖）
+const out = process.env.QA_OUT ? path.resolve(process.env.QA_OUT) : path.dirname(fileURLToPath(import.meta.url));
 const shot = (page, name) => page.screenshot({ path: path.join(out, name) });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

@@ -1,17 +1,21 @@
 import * as THREE from 'three';
 import { createRng, pick, range } from './palette.js';
-import { leafGeometry } from './leaves.js';
+import { leafGeometry, LEAF_OUTLINE, LEAF_VEIN_BASE } from './leaves.js';
 
-// 許願楓葉：比一般落葉大、帶描邊與光暈，每片對應一則留言。
-// 全部用 InstancedMesh 繪製（葉片、描邊、光暈各一個 draw call）。
+// 許願楓葉：比一般落葉大、自己會發光，每片對應一則留言。
+// 發光分三層，都是暖色、沒有硬邊：葉身的內部光（葉脈與葉心較亮）、
+// 沿輪廓往外淡出的邊緣光、以及面向鏡頭的柔和光暈。
+// 全部用 InstancedMesh 繪製（葉片、邊緣光、光暈各一個 draw call）。
 
 const WISH_COLORS = [0xffc94d, 0xffa53a, 0xff7a3a, 0xf45a3c, 0xffd978, 0xff8f5a];
-const RIM_COLOR = 0xfff3d0;
-const HALO_COLOR = 0xffd58a;
-// 後期（ACES）會壓暗接近 1 的亮部並讓亮黃色變淡，描邊與自發光補償回來
-// （自發光用葉色再乘一次自己，保住飽和度）
-const RIM_BOOST = 1.7;
-const BODY_GLOW = 0.85;
+const EDGE_COLOR = 0xffb45e;
+const HALO_COLOR = 0xffc978;
+// 後期（ACES）會壓暗接近 1 的亮部並讓亮黃色變淡，自發光補償回來
+// （用葉色再乘一次自己，保住飽和度）
+const BODY_GLOW = 0.8;
+// 邊緣光：緊貼輪廓處的亮度（疊加）與往外淡出的寬度（葉片約 1 單位大）
+const EDGE_GLOW = 0.6;
+const EDGE_WIDTH = 0.19;
 
 const TAU = Math.PI * 2;
 const DEFAULT_FOCUS = 11;
@@ -35,26 +39,105 @@ function createHaloTexture() {
   return texture;
 }
 
+/**
+ * 邊緣光的幾何：沿葉片輪廓往外長出一圈裙邊，頂點色由輪廓處的白淡到外緣的黑。
+ * 配合疊加混合，就是一圈貼著葉緣、往外消失的光，沒有可辨認的外框線。
+ */
+function createEdgeGlowGeometry() {
+  const count = LEAF_OUTLINE.length;
+  // 每個輪廓頂點的外推方向：相鄰兩邊外法線的平均（輪廓為逆時針，外側在行進方向右手邊）
+  const directions = LEAF_OUTLINE.map(([x, y], i) => {
+    const [px, py] = LEAF_OUTLINE[(i + count - 1) % count];
+    const [nx, ny] = LEAF_OUTLINE[(i + 1) % count];
+    const a = new THREE.Vector2(y - py, px - x).normalize();
+    const b = new THREE.Vector2(ny - y, x - nx).normalize();
+    const direction = a.add(b);
+    return direction.lengthSq() < 1e-6 ? new THREE.Vector2(y - py, px - x).normalize() : direction.normalize();
+  });
+  // 三圈：輪廓、中段、外緣；中段的亮度低於線性，接近指數衰減
+  const rings = [
+    [0, 1],
+    [0.35, 0.32],
+    [1, 0],
+  ];
+  const positions = [];
+  const colors = [];
+  for (const [offset, level] of rings) {
+    LEAF_OUTLINE.forEach(([x, y], i) => {
+      positions.push(x + directions[i].x * EDGE_WIDTH * offset, y + directions[i].y * EDGE_WIDTH * offset, 0);
+      colors.push(level, level, level);
+    });
+  }
+  const index = [];
+  for (let ring = 0; ring < rings.length - 1; ring++) {
+    for (let i = 0; i < count; i++) {
+      const a = ring * count + i;
+      const b = ring * count + ((i + 1) % count);
+      index.push(a, b, a + count, b, b + count, a + count);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(index);
+  return geometry;
+}
+
 function createMeshes(capacity) {
   const bodyMaterial = new THREE.MeshStandardMaterial({ roughness: 0.6, side: THREE.DoubleSide });
-  // 讓葉片帶自身顏色的微光，逆光下也清楚可辨
+  // 內部光：葉片帶自身顏色的光，葉脈匯集處最亮、往葉尖漸弱，葉脈本身像透著光的細線。
+  // 逆光下也清楚可辨，而且亮度有起伏，不像一張平塗的貼紙。
   bodyMaterial.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <emissivemap_fragment>',
-      `#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * ( 0.3 + 0.7 * diffuseColor.rgb ) * ${BODY_GLOW.toFixed(2)};`,
-    );
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vWishUv;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWishUv = position.xy;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        /* glsl */ `#include <common>
+        varying vec2 vWishUv;
+        float wishSegment( vec2 p, vec2 a, vec2 b ) {
+          vec2 pa = p - a, ba = b - a;
+          return length( pa - ba * clamp( dot( pa, ba ) / dot( ba, ba ), 0.0, 1.0 ) );
+        }`,
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        /* glsl */ `#include <emissivemap_fragment>
+        {
+          vec2 wishP = vec2( abs( vWishUv.x ), vWishUv.y );
+          const vec2 wishBase = vec2( ${LEAF_VEIN_BASE[0].toFixed(2)}, ${LEAF_VEIN_BASE[1].toFixed(2)} );
+          float wishVein = min( wishSegment( wishP, vec2( 0.0, -0.5 ), vec2( 0.0, 0.5 ) ) * 0.7,
+            min( wishSegment( wishP, wishBase, vec2( 0.45, 0.19 ) ),
+            min( wishSegment( wishP, wishBase, vec2( 0.47, -0.03 ) ),
+                 wishSegment( wishP, wishBase, vec2( 0.19, 0.4 ) ) ) ) );
+          // 葉脈周圍一圈柔光 + 中間一條細亮線；葉子在畫面上很小時細線淡出，避免閃爍
+          float wishSoft = exp( - wishVein * 13.0 );
+          float wishLine = ( 1.0 - smoothstep( 0.0, max( 0.012, fwidth( wishVein ) ), wishVein ) )
+            * saturate( 0.02 / max( fwidth( wishVein ), 0.0001 ) );
+          // 葉心（葉脈匯集處略上方）往外漸弱
+          float wishCore = 1.0 - smoothstep( 0.05, 0.62, length( vWishUv - vec2( 0.0, -0.06 ) ) );
+          vec3 wishTint = diffuseColor.rgb * ( 0.3 + 0.7 * diffuseColor.rgb );
+          float wishLevel = 0.5 + 0.45 * wishCore + 0.3 * wishSoft;
+          totalEmissiveRadiance += wishTint * wishLevel * ${BODY_GLOW.toFixed(2)}
+            + mix( wishTint, vec3( 1.0, 0.8, 0.5 ), 0.6 ) * wishLine * 0.4;
+        }`,
+      );
   };
   const body = new THREE.InstancedMesh(leafGeometry, bodyMaterial, capacity);
 
-  // 描邊：同一輪廓放大一圈、不寫入深度，先畫描邊再畫葉片
-  const rim = new THREE.InstancedMesh(
-    leafGeometry,
+  // 邊緣光：貼著輪廓往外淡出的暖光（疊加、不寫入深度）
+  const edge = new THREE.InstancedMesh(
+    createEdgeGlowGeometry(),
     new THREE.MeshBasicMaterial({
-      // 略高於 1 的 HDR 值：經過 tone mapping 後描邊仍是畫面裡最亮的線條，
-      // 也只有許願葉會帶到一點 lens glow
-      color: new THREE.Color(RIM_COLOR).multiplyScalar(RIM_BOOST),
+      color: new THREE.Color(EDGE_COLOR).multiplyScalar(EDGE_GLOW),
+      vertexColors: true,
       side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
       depthWrite: false,
+      // 疊加混合不能再混霧色（同光暈）
+      fog: false,
     }),
     capacity,
   );
@@ -66,7 +149,7 @@ function createMeshes(capacity) {
       color: HALO_COLOR,
       transparent: true,
       // 後期管線在線性空間混合，疊加的光暈比以前在 sRGB 空間混合時強，所以不透明度調低
-      opacity: 0.22,
+      opacity: 0.2,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       // 疊加混合不能再混霧色，否則整塊方形會被霧染亮
@@ -75,15 +158,15 @@ function createMeshes(capacity) {
     capacity,
   );
 
-  rim.renderOrder = 1;
-  body.renderOrder = 2;
+  body.renderOrder = 1;
+  edge.renderOrder = 2;
   halo.renderOrder = 3;
-  for (const mesh of [body, rim, halo]) {
+  for (const mesh of [body, edge, halo]) {
     mesh.count = 0;
     mesh.frustumCulled = false;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   }
-  return { body, rim, halo };
+  return { body, edge, halo };
 }
 
 /**
@@ -91,9 +174,9 @@ function createMeshes(capacity) {
  * cameraBase：鏡頭的基準位置，用來把每片葉子排進目前畫面比例看得到的範圍。
  */
 export function createWishLeaves({ camera, cameraBase, reducedMotion = false, capacity = 140 }) {
-  const { body, rim, halo } = createMeshes(capacity);
+  const { body, edge, halo } = createMeshes(capacity);
   const group = new THREE.Group();
-  group.add(rim, body, halo);
+  group.add(body, edge, halo);
 
   /** @type {Array<object>} 依 id 由小到大 */
   const leaves = [];
@@ -120,7 +203,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   function syncColors() {
     leaves.forEach((leaf, i) => body.setColorAt(i, leaf.color));
     if (body.instanceColor) body.instanceColor.needsUpdate = true;
-    body.count = rim.count = halo.count = leaves.length;
+    body.count = edge.count = halo.count = leaves.length;
   }
 
   function remove(leaf) {
@@ -247,10 +330,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       dummy.scale.setScalar(leaf.scaleNow);
       dummy.updateMatrix();
       body.setMatrixAt(i, dummy.matrix);
-
-      dummy.scale.setScalar(leaf.scaleNow * 1.16);
-      dummy.updateMatrix();
-      rim.setMatrixAt(i, dummy.matrix);
+      // 邊緣光與葉片同一個變換（裙邊從輪廓往外長，不需要另外放大）
+      edge.setMatrixAt(i, dummy.matrix);
 
       // 光暈永遠面向鏡頭，輕微呼吸
       const pulse = 1 + Math.sin(time * 1.6 + leaf.phase) * 0.1 * motion + leaf.emphasis * 0.35;
@@ -261,7 +342,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       halo.setMatrixAt(i, haloDummy.matrix);
     }
     body.instanceMatrix.needsUpdate = true;
-    rim.instanceMatrix.needsUpdate = true;
+    edge.instanceMatrix.needsUpdate = true;
     halo.instanceMatrix.needsUpdate = true;
   }
 
