@@ -157,3 +157,73 @@ Commit `63e13fd`。只動前端：`src/trees.js`、`src/wishLeaves.js`、`src/le
 
 - 本機驗收用 JSON fallback 儲存（啟動時取消 `DATABASE_URL`），`data/wishes.json` 多了驗收腳本送出的 3 則留言（67 → 70）（該檔在 `.gitignore`）。
 - 沒有 push、部署、讀 `.env*`、呼叫 RoamerHost，也沒有動 `~/Desktop/Three2blender`。
+
+---
+
+# 第二輪（feature/visual-r2，規格：`_SPEC_視覺第二輪.md`）
+
+參考 `~/Desktop/_ref/abyssal-garden`（MIT，WebGPU）**只學做法、沒有搬程式碼**。學到的做法：用太陽陰影貼圖做體積光柱的 ray march、
+沿太陽方向不變的光束圖樣、低解析度算完再做深度感知的模糊與放大、只在光照到的地方才看得見的灰塵、慢慢閃爍的光點、
+以 18% 灰為中心的對比調色，以及「固定鏡位＋只看截圖的盲審」這套驗收流程。沒有新增貼圖或模型，`public/textures/CREDITS.md` 不用改。
+
+## 改了什麼
+
+| 規格項目 | 做法（檔案） |
+| --- | --- |
+| 1 逆光與對比 | 霧密度 0.0105 → 0.0038，另外讓 70–116 m 外淡進霧色，藏住地表邊界（`palette.js`、`atmosphere.js`）。背光霧色調暗，半球光 1.15 → 0.5，補光 0.75 → 0.18，太陽 3.8 → 5.2，曝光 0.92；合成時以 18% 灰為中心拉開對比，暗部略偏冷（`post.js`）。太陽移到左前方樹冠邊緣後面（方位 −12°、仰角 15°），圓盤縮小、亮度壓低（`environment.js`）。 |
+| 2 光柱＋灰塵 | 改用體積光：每個像素沿視線查太陽陰影貼圖，被樹冠擋住的地方沒有散射光，再乘上沿太陽方向不變的光束圖樣，形成一條條光柱（只在樹冠高度以下、15 m 內）。HG 前向相位。high 32 步、mid 14 步，都在 1/4 解析度算，之後做深度感知的模糊與 4-tap 放大（`post.js`）。灰塵在 vertex shader 查陰影貼圖，只有站在光裡才看得見（`sparkles.js`）。 |
+| 3 樹冠 | 載入時重建 GLB 的樹冠：去掉葉叢中心的實心團塊，原有葉片縮成 0.6 倍、逐片換色相（紅／橘為主，少量金黃與帶綠，`palette.js` 的 `LEAF_HUES`），每個葉叢另外補 22 片小葉（仍是每種樹一個 InstancedMesh）。每片葉子帶 AO（在樹冠裡的深度、在葉叢裡朝內或朝外、高度）與樹冠方位；背光那一側更暗。透光加上「穿過多層葉片」的項與側面散射，陰影幾乎全保留；粗糙度 0.95（`trees.js`、`leafShading.js`）。 |
+| 4 粒子 | 金色光點 260 顆慢慢明暗閃爍（`sparkles.js`）。裝飾落葉 850 → 380（high）、尺寸 0.06–0.21 且多數是小葉，不用金黃與黃綠、略暗、透光較弱，與鏡頭保持 4.5 m 以上（`leaves.js`）。許願葉：遠近分級的邊緣光／光暈、光暈中心有一點光核（一般落葉沒有）、自己剛留下的那片放在標題正下方，邊緣光 2.6 倍並脈動（`wishLeaves.js`）。 |
+| 5 地面 | 樹下 AO、落葉堆積量、「抬頭看得到樹冠」的範圍，預先算成 384² 的小貼圖（`environment.js`）。木漏れ日：只作用在太陽光上，在陰影外把光打散，在樹冠陰影裡從葉縫漏出沿光線拉長的小光斑，隨風輕晃（`komorebi.js`）。地面落葉約八成堆在樹根周圍與小徑邊緣（`leaves.js` 的 `createLitterSpots`）。 |
+| 6 前景框景 | 右上角一根近距離楓枝，放在獨立的前景層（`FOREGROUND_LAYER`）：以不受光的剪影畫進 1/2 解析度、4× MSAA 的透明 buffer，高斯模糊後疊在最上層，隨風輕晃，滑鼠移動時略有視差（`framing.js`、`post.js`）。許願葉的停留位置會避開右上角與標題的實際 DOM 範圍。 |
+| 7 環境音（加分） | Web Audio 即時合成：粉紅雜訊做風聲（陣風）、高頻帶通雜訊做葉子沙沙、留下楓葉時一聲鐘聲加回聲（`ambience.js`）。預設靜音；右下角開關按下才建立 AudioContext，關掉時淡出並 suspend。`wishWall.js` 送出成功後只多發一個 `wish:planted` 事件，不帶留言內容。 |
+
+其他：
+
+- 修正 r187 PCF 陰影的逐像素旋轉在小葉片上造成的網點（`atmosphere.js` 改成固定角度）。葉片材質查陰影時沿太陽方向外推 0.12 m，避免自我遮蔽格紋。
+- 對話框的 `::backdrop` 拿掉 `backdrop-filter`：疊在 WebGL canvas 上會被粗略取樣成方塊，背景改由景深糊掉。標題在卡片開啟時淡出。
+- 畫質檔：high＝完整光柱＋景深＋glow；mid＝簡化光柱（14 步）＋glow；low＝簡化光柱，強度減半，陰影圖改 2048（只在載入時畫一次）。`?quality=`、`?dof=0`、`?mm=` 照舊。
+  `run-visual.mjs` 原本檢查 mid／low「光柱關閉」，已改成檢查 `'lite'`，因為規格要求 mid 也要有簡化版。
+- 驗收用的 hook：`window.__visual.setPose({ position, target, focus })`、`configure()`、`scene`。`window.__wishWall` 的既有欄位都沒有刪。
+- `server/`、資料表、API 契約都沒有動。
+
+## 驗收
+
+- `npm test`：16/16 通過。`npm run build`：成功。
+- `_qa/run-qa.mjs`（許願牆回歸，`QA_OUT` 指到暫存目錄）：**27/27 通過**。HTTP 400 是腳本刻意送出含網址的留言。
+- `_qa/visual/run-visual.mjs`（`QA_OUT=_qa/visual/r2/regression`）：**20/20 通過**，沒有 console error／warning。
+- 環境音（headless）：按下開關後 `enabled` 變 true、`aria-pressed` 變 true，送出 `wish:planted` 沒有錯誤，再按一次就關閉。**實際聲音沒有人耳試聽過。**
+
+### 固定鏡位、盲審、前後對比
+
+- 6 個固定鏡位（`_qa/visual/r2/capture.mjs`，不送留言）：首頁、許願葉飄落停好後、卡片打開、低角度仰望樹冠、地面近景、手機直式（自動選 low）。
+- 盲審：另外開的 `claude -p`，只給截圖路徑與目標畫面描述（`critic-prompt.txt`），在 repo 外執行。共跑 12 輪，每輪原文都在 `_qa/visual/r2/critic.md`，截圖在 `round1/`–`round12/`。
+- **評審最後結論：最高嚴重度仍是 major，沒有達到「沒有高於 minor」的目標。** 剩下的 major 主要是：許願葉的平面造型與群聚（既定設計）、
+  近景樹冠的低面數葉卡、樹形只有 5 種、樹根沒有隆起（要重做 Blender 模型），以及幾項評審自己前後矛盾的意見。詳見 `critic.md` 末尾的結論。
+- 前後對比：`_qa/visual/r2/compare-01.png`–`compare-06.png`。左邊是 `2d4f9d4`（解出到暫存目錄、只補上同一個 `setPose` hook），右邊是最終版，鏡位相同。原始截圖在 `before/` 與 `round12/`。
+
+### 效能（headless Chrome、Apple M3、1440×900 @2×，`?quality=` 強制、不降級）
+
+新舊兩版同時在跑，交替量測；背景負載會干擾，每格是兩次量測：
+
+| 檔次 | 2d4f9d4 | 第二輪 |
+| --- | --- | --- |
+| high（2880×1800） | 38.4／35.4 ms | 51.0／51.9 ms；最後的優化後 39.9／45.2／47.4 ms |
+| mid（2160×1350） | 18.6／18.2 ms | 29.2／26.3 ms |
+| low（2160×1350） | 16.6／16.6 ms | 22.8／22.9 ms |
+| 手機模擬 low（585×1266，CPU 4× 降速） | 16.6 ms | 16.6 ms（約 60 fps） |
+
+- 拆解 high（關掉後期時約 30–36 ms）：樹冠約 7 ms、地面約 6 ms、體積光柱與景深各約 4–8 ms。
+- **high 在 headless 下沒有達到流暢（約 20–25 fps），比上一版慢約 1.3–1.4 倍。** 沒有強制檔次時，幀時間監看會自動降級：high → 輔助 pass 減半 → mid。
+  `run-visual` 的自動降級測試通過（high → mid，點擊熱區仍正確）。上一輪報告已提過 headless 數字比實際視窗慢；**這輪沒有用實際的 Chrome 視窗量過**，所以「high 在這台 MacBook 是否流暢」還沒有實測確認。
+- GPU timer query 在 ANGLE／Metal 上回傳的是接近 wall-clock 的值，不能用，所以上面都是 rAF 幀時間。
+
+## 已知限制
+
+- 盲審沒有收斂到 minor 以下（見上）。
+- high 的效能比上一版差，靠自動降級兜底；要讓 high 在 2× 下穩定 60 fps，下一步可以：high 改成 1.75× 或動態解析度（像 abyssal-garden 那樣先降解析度）、樹冠做距離 LOD、地面光斑改成預算好的貼圖。
+- 前景楓枝固定在鏡頭右上角。驗收用的非首頁固定鏡位（仰望、地面）會把它隱藏，因為它只屬於首頁的構圖。
+- 光柱與灰塵靠陰影貼圖，陰影只在載入（與樹木載入完成）時畫一次。太陽與樹都是靜止的，所以沒問題；如果之後要讓太陽移動，必須每幀更新陰影。
+- 許願葉在 `placeHome` 裡會避開標題與右上角樹枝，所以和上一版比，部分許願葉的停留位置不一樣（同一則留言每次載入的位置仍然固定）。點擊熱區的測試全部通過。
+- 本機用 JSON fallback 儲存；兩支驗收腳本在 `data/wishes.json` 共新增 3 則留言（70 → 73，該檔在 `.gitignore`）。
+- 沒有 push、部署、讀 `.env*`、呼叫 RoamerHost，也沒有動 `~/Desktop/Three2blender` 主資料夾。舊版對照是用 `git archive 2d4f9d4` 解到 `/tmp/t2b-old`，在 port 3101 跑。
