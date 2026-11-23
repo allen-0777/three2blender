@@ -110,6 +110,23 @@ function decorate(material, { kind, moss = 0.6, mossLow = 0, lanternGain = 1 }) 
         }`,
       )
       .replace(
+        '#include <normal_fragment_maps>',
+        /* glsl */ `#include <normal_fragment_maps>
+        {
+          // 凹凸：用雜訊當高度，以螢幕空間導數擾動法線（石頭的粗糙面、木頭的紋理），不需要貼圖
+          float bumpH = s2Fbm( vS2World * ${kind === 'wood' ? '7.0' : '5.0'} );
+          vec3 dpdx = dFdx( vS2World );
+          vec3 dpdy = dFdy( vS2World );
+          vec3 nW = normalize( vS2Normal );
+          vec3 r1 = cross( dpdy, nW );
+          vec3 r2 = cross( nW, dpdx );
+          float det = dot( dpdx, r1 );
+          vec3 grad = sign( det ) * ( dFdx( bumpH ) * r1 + dFdy( bumpH ) * r2 );
+          vec3 bumped = normalize( abs( det ) * nW - grad * ${kind === 'wood' ? '0.08' : '0.1'} );
+          normal = normalize( ( viewMatrix * vec4( bumped, 0.0 ) ).xyz );
+        }`,
+      )
+      .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
         totalEmissiveRadiance += diffuseColor.rgb * lanternLight( vS2World, normalize( vS2Normal ) ) * ${lanternGain.toFixed(2)};`,

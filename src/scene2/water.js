@@ -72,11 +72,12 @@ const FRAGMENT = /* glsl */ `
       reflected = texture( tEnv, R, 2.2 ).rgb;
     } else {
       // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
-      reflected = mix( uSkyFallback, mapleHaze( normalize( vec3( R.x, max( R.y, 0.02 ), R.z ) ) ) * 1.2, 0.35 + 0.65 * smoothstep( 0.15, 0.7, R.y ) );
-      // 細碎的波光，讓水面和地面分得開
-      reflected += mapleHaze( vec3( 0.0, 0.1, -1.0 ) ) * smoothstep( 0.008, 0.02, length( slope ) ) * 0.6;
+      // 暗色的倒影（對岸樹林）為底，只有遠處的水面帶一點天空色；細碎的波光讓水和地面分得開
+      float farSky = smoothstep( 8.0, 30.0, dist );
+      reflected = mix( uSkyFallback, mapleHaze( normalize( vec3( R.x, max( R.y, 0.05 ), R.z ) ) ) * 0.7, farSky * 0.6 );
+      reflected += mapleHaze( vec3( 0.0, 0.1, -1.0 ) ) * smoothstep( 0.006, 0.014, length( slope ) ) * 0.35;
     }
-    reflected = min( reflected, vec3( 2.5 ) );
+    reflected = min( reflected, vec3( 1.6 ) );
     float fresnel = 0.02 + 0.98 * pow( 1.0 - max( dot( N, V ), 0.0 ), 5.0 );
     fresnel = mix( 0.2, 0.92, fresnel );
     vec3 color = mix( uBody, reflected, fresnel );

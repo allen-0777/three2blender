@@ -11,14 +11,14 @@ function tuftGeometry() {
   const blades = 7;
   for (let i = 0; i < blades; i++) {
     const a = (i / blades) * Math.PI * 2 + i * 0.7;
-    const lean = 0.25 + (i % 3) * 0.12;
-    const h = 0.75 + (i % 4) * 0.12;
-    const w = 0.05;
+    const lean = 0.3 + (i % 3) * 0.14;
+    const h = 0.6 + (i % 4) * 0.12;
+    const w = 0.035;
     const dx = Math.cos(a);
     const dz = Math.sin(a);
     // 一片草葉：兩個底點 + 彎向外側的葉尖
     positions.push(-dz * w, 0, dx * w, dz * w, 0, -dx * w, dx * lean, h, dz * lean);
-    colors.push(0.05, 0.09, 0.02, 0.05, 0.09, 0.02, 0.32, 0.36, 0.08);
+    colors.push(0.07, 0.1, 0.03, 0.07, 0.1, 0.03, 0.42, 0.42, 0.12);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -54,7 +54,7 @@ export function createGrass(rng, count) {
       if (d < 0.98 || rng() > Math.exp(-((d - 1.15) ** 2) / 0.12)) continue;
     }
     if (pathDistance(x, z) < 0.9) continue;
-    const s = range(rng, 0.22, 0.42);
+    const s = range(rng, 0.14, 0.36) * (rng() < 0.15 ? 1.4 : 1);
     dummy.position.set(x, groundHeight2(x, z) - 0.02, z);
     dummy.rotation.set(range(rng, -0.12, 0.12), rng() * Math.PI * 2, range(rng, -0.12, 0.12));
     dummy.scale.set(s * range(rng, 0.8, 1.3), s * range(rng, 0.8, 1.4), s * range(rng, 0.8, 1.3));

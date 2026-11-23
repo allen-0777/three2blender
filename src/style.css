@@ -563,10 +563,11 @@ body:has(#wish-card-dialog[open]) .title > * {
   padding: 2px;
   border: 1px solid rgba(255, 246, 230, 0.28);
   border-radius: 999px;
-  background: rgba(36, 12, 5, 0.42);
+  background: rgba(30, 10, 4, 0.58);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  opacity: 0.72;
+  opacity: 0.8;
+  text-shadow: 0 1px 4px rgba(30, 8, 2, 0.8);
   transition: opacity 0.2s ease;
 }
 

@@ -16,6 +16,7 @@ const VERTEX = /* glsl */ `
   uniform mat4 uShadowMatrix;
   uniform float uShadowReady;
   uniform vec3 uSunDir;
+  uniform vec2 uLevels; // x：灰塵、y：金色光點（場景二的夜晚把灰塵關小）
   varying vec3 vColor;
   float sunVisible( vec3 p ) {
     vec4 s = uShadowMatrix * vec4( p, 1.0 );
@@ -40,12 +41,12 @@ const VERTEX = /* glsl */ `
       // 灰塵：前向散射，背光時幾乎看不見
       float mu = max( dot( viewDir, uSunDir ), 0.0 );
       float scatter = 0.06 + pow( mu, 6.0 ) * 1.4;
-      vColor = vec3( 1.0, 0.78, 0.52 ) * visible * scatter * 4.0;
+      vColor = vec3( 1.0, 0.78, 0.52 ) * visible * scatter * 4.0 * uLevels.x;
       gl_PointSize = aSeed.w * uPixelScale / distance;
     } else {
       // 金色光點：大部分時間很暗，偶爾慢慢亮起來
       float twinkle = pow( 0.5 + 0.5 * sin( uTime * ( 0.35 + aSeed.y * 0.9 ) + aSeed.x * 17.0 ), 6.0 );
-      vColor = vec3( 1.0, 0.72, 0.3 ) * ( 0.06 + twinkle * 5.0 ) * ( 0.45 + 0.55 * visible );
+      vColor = vec3( 1.0, 0.72, 0.3 ) * ( 0.06 + twinkle * 5.0 ) * ( 0.45 + 0.55 * visible ) * uLevels.y;
       gl_PointSize = aSeed.w * uPixelScale / distance;
     }
     // 太小的點不要閃爍：保底 1.5 px，亮度按面積折回
@@ -99,6 +100,7 @@ export function createSparkles({ rng, sun, sunDirection, dust = 1400, gold = 160
     uShadowMatrix: { value: new THREE.Matrix4() },
     uShadowReady: { value: 0 },
     uSunDir: { value: sunDirection.clone() },
+    uLevels: { value: new THREE.Vector2(1, 1) },
   };
   const material = new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -127,6 +129,10 @@ export function createSparkles({ rng, sun, sunDirection, dust = 1400, gold = 160
     /** 場景二切換時段時，太陽（或月亮）換方向 */
     setSunDirection(direction) {
       uniforms.uSunDir.value.copy(direction);
+    },
+    /** 灰塵與金色光點的亮度倍率（預設 1） */
+    setLevels(dust, gold) {
+      uniforms.uLevels.value.set(dust, gold);
     },
     setLevel(level) {
       geometry.setDrawRange(0, Math.round(total * Math.min(Math.max(level, 0), 1)));

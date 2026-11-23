@@ -198,18 +198,24 @@ export function createStones(rng) {
     }
   };
   addSlabs(11.2, BRIDGE.zNear + 0.15, 0.78);
-  addSlabs(BRIDGE.zFar - 0.25, -25.5, 0.95);
-  const slabMesh = new THREE.InstancedMesh(slabGeometry(), createStoneMaterial({ color: 0x8b867c, moss: 0.35 }), slabs.length);
+  addSlabs(BRIDGE.zFar - 0.25, -21.5, 0.95);
+  // 橋頭兩側各一對石墩
+  for (const z of [BRIDGE.zNear + 0.15, BRIDGE.zFar - 0.15]) {
+    for (const side of [-1, 1]) slabs.push({ x: BRIDGE.x + side * (BRIDGE.width / 2 + 0.35), z, s: 0.32, pier: true });
+  }
+  // 踏石：圓潤、不規則、微微埋進土裡的扁石
+  const slabMesh = new THREE.InstancedMesh(rockGeometry(7.7), createStoneMaterial({ color: 0x7a756b, moss: 0.4 }), slabs.length);
   const dummy = new THREE.Object3D();
   slabs.forEach((s, i) => {
-    dummy.position.set(s.x, groundHeight2(s.x, s.z) + 0.02, s.z);
-    dummy.rotation.set(range(rng, -0.03, 0.03), rng() * Math.PI, range(rng, -0.03, 0.03));
-    dummy.scale.set(s.s * range(rng, 1.0, 1.35), 0.07, s.s);
+    const height = s.pier ? 0.42 : range(rng, 0.13, 0.17);
+    dummy.position.set(s.x, groundHeight2(s.x, s.z) + (s.pier ? 0.08 : 0.0), s.z);
+    dummy.rotation.set(range(rng, -0.04, 0.04), rng() * Math.PI, range(rng, -0.04, 0.04));
+    dummy.scale.set(s.s * range(rng, 1.0, 1.3), height, s.s);
     dummy.updateMatrix();
     slabMesh.setMatrixAt(i, dummy.matrix);
   });
   slabMesh.receiveShadow = true;
-  slabMesh.castShadow = false;
+  slabMesh.castShadow = true;
   group.add(slabMesh);
 
   // 溪石：沿兩岸，靠橋與燈籠的地方多一些；部分浸在水裡

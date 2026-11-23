@@ -126,19 +126,25 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
   const limbs = [
     { a: Math.PI * 0.97, up: 0.75, len: 12 }, // 左上
     { a: Math.PI * 0.8, up: 1.15, len: 10.5 }, // 左後偏上
-    { a: 0.05, up: 0.7, len: 12.5 }, // 右上
+    { a: 0.05, up: 0.78, len: 9.5 }, // 右上（短一點，右上方留給月亮）
     { a: Math.PI * 0.2, up: 1.1, len: 10.8 }, // 右後偏上
     { a: Math.PI * 0.5, up: 1.8, len: 9.5 }, // 往後、往上
     { a: Math.PI * 1.55, up: 1.0, len: 7.5 }, // 往前（短）
     { a: Math.PI * 1.25, up: 0.55, len: 10 }, // 左前，低而長
-    { a: Math.PI * 1.78, up: 0.5, len: 9.8 }, // 右前，低而長
+    { a: Math.PI * 1.78, up: 0.55, len: 8.0 }, // 右前
+    // 從樹幹中段分出的低枝（打破 Y 字形），水平展開
+    { a: Math.PI * 1.1, up: 0.55, len: 6.5, from: 0.6 },
+    { a: -0.15, up: 0.6, len: 6.0, from: 0.66 },
+    { a: Math.PI * 0.6, up: 0.7, len: 6, from: 0.55 },
   ];
   for (const limb of limbs) {
     const dir = new THREE.Vector3(Math.cos(limb.a), limb.up, -Math.sin(limb.a));
-    const start = top.clone().addScaledVector(dir.clone().setY(0).normalize(), 0.3).add(new THREE.Vector3(0, -1.2, 0));
+    const start = limb.from
+      ? trunkCurve.getPointAt(limb.from).addScaledVector(dir.clone().setY(0).normalize(), 0.6)
+      : top.clone().addScaledVector(dir.clone().setY(0).normalize(), 0.3).add(new THREE.Vector3(0, -1.2, 0));
     const curve = bentCurve(start, dir, limb.len, rng, 0.4);
-    const r0 = range(rng, 0.7, 0.92);
-    wood.push(tube(curve, (u) => r0 * (1 - 0.6 * u), { segments: 18, sides: 14 }));
+    const r0 = range(rng, 0.7, 0.92) * (limb.from ? 0.75 : 1);
+    wood.push(tube(curve, (u) => r0 * (1 - 0.6 * u) * (1 + 0.5 * Math.exp(-u * 10)), { segments: 18, sides: 16, bumps: 0.12, bumpSeed: limb.a }));
     // 第二層：每根大枝分出 3～4 根小枝
     const branchCount = 3 + Math.floor(rng() * 2);
     for (let b = 0; b < branchCount; b++) {
@@ -174,7 +180,19 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
   trunkMesh.castShadow = true;
   trunkMesh.receiveShadow = true;
 
-  const { geometry: foliageGeometry, crown } = buildFoliage(tips, leafBudget, rng);
+  // 從首頁鏡頭看出去右上方留一個天空缺口（概念圖：午後露出藍天、夜晚的月亮在這裡）：
+  // 落在這個方向的葉叢不長（枝條保留，像樹冠裡的空隙）
+  const SCALE = 1.18;
+  const eye = new THREE.Vector3(0, 1.9, 12);
+  const world = new THREE.Vector3();
+  const open = tips.filter((t) => {
+    world.copy(t.point).sub(base).multiplyScalar(SCALE).add(base).sub(eye);
+    const az = THREE.MathUtils.radToDeg(Math.atan2(world.x, -world.z));
+    const el = THREE.MathUtils.radToDeg(Math.atan2(world.y, Math.hypot(world.x, world.z)));
+    const margin = THREE.MathUtils.radToDeg(Math.atan2(t.radius * SCALE, world.length()));
+    return !(az + margin > 14.5 && az - margin < 25 && el + margin > 9 && el - margin < 19);
+  });
+  const { geometry: foliageGeometry, crown } = buildFoliage(open, leafBudget, rng);
   const foliageMesh = new THREE.Mesh(foliageGeometry, createFoliageMaterial({ sunWorld: sceneTwoSun }));
   foliageMesh.castShadow = true;
   foliageMesh.receiveShadow = true;
@@ -182,6 +200,12 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
   const group = new THREE.Group();
   group.name = 'giant-tree';
   group.add(trunkMesh, foliageMesh);
+  // 整棵樹以根部為中心放大：比兩旁的楓樹大三倍以上
+  for (const mesh of [trunkMesh, foliageMesh]) {
+    mesh.geometry.translate(-base.x, -base.y, -base.z);
+  }
+  group.position.copy(base);
+  group.scale.setScalar(SCALE);
   return { group, trunkMesh, foliageMesh, crown };
 }
 
@@ -190,6 +214,10 @@ function addMoss(material) {
   const original = material.onBeforeCompile;
   material.onBeforeCompile = (shader) => {
     original(shader);
+    // 老樹的樹皮紋路比一般楓樹粗、溝更深
+    shader.fragmentShader = shader.fragmentShader
+      .replace('const float BARK_SCALE = 0.85;', 'const float BARK_SCALE = 0.42;')
+      .replace('const float strength = 1.4;', 'const float strength = 2.4;');
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <roughnessmap_fragment>',
       /* glsl */ `{

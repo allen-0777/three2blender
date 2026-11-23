@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 export const WATER_LEVEL = -0.1;
 /** 神木位置（樹幹中心） */
-export const GIANT_TREE = { x: 0.4, z: -31 };
+export const GIANT_TREE = { x: 0.4, z: -29 };
 
 const smooth = (x, a, b) => THREE.MathUtils.smoothstep(x, a, b);
 
@@ -51,7 +51,7 @@ export function groundHeight2(x, z) {
   // 神木根部的隆起
   const tx = x - GIANT_TREE.x;
   const tz = z - GIANT_TREE.z;
-  h += 0.75 * Math.exp(-(tx * tx + tz * tz) / (2 * 6.5 * 6.5));
+  h += 0.35 * Math.exp(-(tx * tx + tz * tz) / (2 * 6.5 * 6.5));
   // 遠方略微升高，地平線不會是一條平線
   h += smooth(-z, 60, 120) * 1.6 * (0.6 + 0.4 * Math.sin(x * 0.05 + 1));
   return h;

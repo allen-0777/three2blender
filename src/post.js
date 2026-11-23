@@ -234,6 +234,7 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
   uniform float uVignette;
   uniform float uAspect;
   uniform float uContrast;
+  uniform float uSaturation;
   ${DEPTH_GLSL}
   void main() {
     // 壓住極少數過亮的像素（太陽邊緣的葉緣），避免閃爍的白點
@@ -287,6 +288,8 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
     float lum = max(dot(color, vec3(0.2126, 0.7152, 0.0722)), 1e-5);
     float graded = 0.18 * pow(lum / 0.18, uContrast);
     color *= graded / lum;
+    // 飽和度（場景一維持 1；場景二的午後略提高，照概念圖的濃烈楓紅）
+    color = max(mix(vec3(graded), color, uSaturation), vec3(0.0));
     float shadowMix = 1.0 - smoothstep(0.0, 0.12, graded);
     color *= mix(vec3(1.0), vec3(0.9, 0.95, 1.08), shadowMix * 0.5);
 
@@ -337,7 +340,7 @@ export function createPost(renderer, { sunDirection: initialSun }) {
 
   /** rays：'full'（high）、'lite'（mid 的簡化版）或 false */
   const settings = { dof: true, glow: true, rays: 'full', raysIntensity: 1, msaa: 4, auxScale: 1 };
-  const look = { glow: 0.2, rays: 1, vignette: 0.42, threshold: 1.8, fStop: 1.4, maxCoc: 0.009, contrast: 1.18 };
+  const look = { glow: 0.2, rays: 1, vignette: 0.42, threshold: 1.8, fStop: 1.4, maxCoc: 0.009, contrast: 1.18, saturation: 1 };
   /** 太陽的平行光（陰影貼圖給體積光柱用），由 setSun() 指定 */
   let sunLight = null;
   const size = new THREE.Vector2(1, 1);
@@ -422,6 +425,7 @@ export function createPost(renderer, { sunDirection: initialSun }) {
       uVignette: { value: look.vignette },
       uAspect: { value: 1 },
       uContrast: { value: look.contrast },
+      uSaturation: { value: 1 },
       ...depthUniforms,
     },
     { defines: {} },
@@ -628,6 +632,7 @@ export function createPost(renderer, { sunDirection: initialSun }) {
       compositeMaterial.uniforms.uRays.value = rays ? look.rays * settings.raysIntensity * facing : 0;
       compositeMaterial.uniforms.uVignette.value = look.vignette;
       compositeMaterial.uniforms.uContrast.value = look.contrast;
+      compositeMaterial.uniforms.uSaturation.value = look.saturation;
       draw(compositeMaterial, null);
     },
 

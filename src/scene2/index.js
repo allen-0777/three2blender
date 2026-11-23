@@ -8,6 +8,7 @@ import { createBridge } from './bridge.js';
 import { createGiantTree } from './giantTree.js';
 import { createGround2, createStones } from './ground.js';
 import { createGrass } from './grass.js';
+import { createDistantForest } from './distant.js';
 import { createLanterns } from './lantern.js';
 import { sceneTwoSun } from './materials.js';
 import { createPines } from './pine.js';
@@ -23,7 +24,8 @@ import {
 // 和場景一共用 renderer、鏡頭、後期、許願葉；自己有一個 THREE.Scene、太陽、天空、地面。
 // 可以切換午後／黃昏／夜晚（timeOfDay.js）。
 
-const GINKGO_HUES = [[0xf2c230, 4], [0xf6d250, 3], [0xe8a820, 2.2], [0xd8b83a, 1], [0xb9a83a, 0.4]];
+// 銀杏：偏檸檬的亮黃，和楓樹的橘紅分得開
+const GINKGO_HUES = [[0xf5d82a, 4], [0xf8e45a, 3], [0xecc81e, 2], [0xd9cf3a, 1], [0xc4c040, 0.4]];
 const GREEN_HUES = [[0x6f8a2e, 3], [0x8a9a35, 2.2], [0xb9a83a, 1.4], [0xe0451b, 0.8], [0xc8231c, 0.5]];
 const weighted = (list) => {
   const total = list.reduce((sum, [, w]) => sum + w, 0);
@@ -40,7 +42,7 @@ const weighted = (list) => {
 // 指定位置的樹種（照概念圖：右側銀杏與黑松、左側一棵黑松、兩棵還帶綠的楓樹）
 const FIXED = [
   { x: 8.8, z: -2.0, species: 'pine', height: 8.5 },
-  { x: -6.5, z: -14, species: 'pine', height: 6.4 },
+  { x: -5.9, z: -9.5, species: 'pine', height: 7.2 },
   { x: 12.5, z: -17, species: 'pine', height: 7 },
   { x: -15, z: -24, species: 'pine', height: 7 },
   { x: 7.2, z: -11.5, species: 'ginkgo' },
@@ -64,7 +66,7 @@ export function layoutTrees(rng) {
     if (gx * gx + gz * gz < 12 * 12) return; // 神木周圍留空
     // 從首頁鏡頭看出去右上方的一塊天空不種楓樹：午後露出藍天，夜晚看得到月亮（照概念圖）
     const azimuth = (Math.atan2(x, 12 - z) * 180) / Math.PI;
-    if (z < 2 && azimuth > 16 && azimuth < 31) return;
+    if (z < 2 && azimuth > 15 && azimuth < 31) return;
     trees.push({ x, z, species: 'maple', scale, rotation: rng() * Math.PI * 2 });
   };
   // 小徑兩側
@@ -72,12 +74,12 @@ export function layoutTrees(rng) {
     for (const side of [-1, 1]) tryPlace(side * range(rng, 4.8, 8.0), z + range(rng, -1, 1), range(rng, 1.0, 1.45));
   }
   // 外圍
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 70; i++) {
     const side = rng() < 0.5 ? -1 : 1;
     tryPlace(side * range(rng, 8.5, 30), range(rng, -34, 9), range(rng, 0.95, 1.45));
   }
   // 神木兩側與後方的遠景林
-  for (let i = 0; i < 40; i++) tryPlace(range(rng, -34, 34), range(rng, -58, -36), range(rng, 1.1, 1.6));
+  for (let i = 0; i < 22; i++) tryPlace(range(rng, -30, 30), range(rng, -52, -36), range(rng, 1.1, 1.6));
   for (const t of trees) {
     t.leanX = range(rng, -0.06, 0.06);
     t.leanZ = range(rng, -0.06, 0.06);
@@ -109,7 +111,10 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 1, far: 240 });
   const fill = new THREE.DirectionalLight(0xffffff, 0.2);
   fill.position.set(10, 8, 20);
-  scene.add(hemisphere, sun, sun.target, fill);
+  // 夜晚（與黃昏）的暖色補光：從前下方往上，像燈籠與許願葉映在樹冠下緣的光；白天強度 0
+  const uplight = new THREE.DirectionalLight(0xff7a33, 0);
+  uplight.position.set(2, -6, 30);
+  scene.add(hemisphere, sun, sun.target, fill, uplight);
 
   // ---- 地形、小溪、橋、石頭、燈籠 ----
   const trees = layoutTrees(rng);
@@ -120,6 +125,7 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   scene.add(createBridge());
   scene.add(createStones(rng));
   scene.add(createGrass(rng, quality.grass ?? 2400));
+  scene.add(createDistantForest(rng));
   const lanterns = createLanterns();
   scene.add(lanterns.group);
 
@@ -225,6 +231,8 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
     water.setSun(sunDirection, color.setRGB(...p.sunColor).multiplyScalar(p.sunIntensity * 0.25), p.water.glitter);
     water.setBody(color.setRGB(...p.water.body), new THREE.Color().setRGB(...p.water.fallback));
     sparkles.setSunDirection(sunDirection);
+    sparkles.setLevels(...p.sparkles);
+    uplight.intensity = p.uplight;
     applyAtmosphere();
     renderer.shadowMap.needsUpdate = true;
     reflectionsDirty = true;
