@@ -68,10 +68,10 @@ export const bentLeafGeometry = createBentLeafGeometry();
  * 一般落葉的材質：正面／背面色差、程序化葉脈、跟著太陽的透光。
  * 沒有 emissive：背光且在陰影裡的葉子就是暗的，只有許願葉會自己發光。
  */
-function createLeafMaterial() {
+function createLeafMaterial({ transmit = 0.85, forward = 2.2 } = {}) {
   // 粗糙度高、不反光：去掉塑膠感
   const material = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide });
-  const transmission = leafTransmission({ transmit: 0.85, forward: 2.2 });
+  const transmission = leafTransmission({ transmit, forward });
   material.onBeforeCompile = (shader) => {
     transmission(shader);
     shader.vertexShader = shader.vertexShader
@@ -116,9 +116,11 @@ function createLeafMaterial() {
 }
 
 const leafMaterial = createLeafMaterial();
+// 飄落的裝飾葉透光較弱：逆光時不會亮得像發光的許願葉
+const fallingLeafMaterial = createLeafMaterial({ transmit: 0.4, forward: 1.0 });
 
 function createLeafMesh(count, rng, { muted = false } = {}) {
-  const mesh = new THREE.InstancedMesh(bentLeafGeometry, leafMaterial, count);
+  const mesh = new THREE.InstancedMesh(bentLeafGeometry, muted ? fallingLeafMaterial : leafMaterial, count);
   const color = new THREE.Color();
   for (let i = 0; i < count; i++) {
     let hex = pickLeafHue(rng);

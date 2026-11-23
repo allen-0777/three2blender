@@ -255,7 +255,7 @@ function createGround(rng, { textureSize, anisotropy }, { trees, litterSpots }) 
       material.map = map;
       material.normalMap = normalMap;
       // 低角度看過去法線太強會變成沙丘般的波紋
-      material.normalScale.setScalar(0.8);
+      material.normalScale.setScalar(0.55);
       // ARM：R = AO、G = roughness（B 的 metalness 不使用）
       material.aoMap = arm;
       material.roughnessMap = arm;

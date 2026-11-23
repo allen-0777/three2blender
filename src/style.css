@@ -242,9 +242,9 @@ body {
 }
 
 .wish-dialog::backdrop {
-  background: rgba(60, 20, 8, 0.5);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  /* 不用 backdrop-filter：疊在 WebGL canvas 上的 CSS 模糊會被粗略取樣成方塊。
+     場景本身已經由景深把焦點拉到被點的那片葉子、背景自然糊掉，這裡只壓暗 */
+  background: rgba(50, 16, 6, 0.56);
 }
 
 .wish-dialog[open] {
@@ -511,10 +511,9 @@ body:has(#wish-card-dialog[open]) .title {
     font-size: 1rem;
   }
 
-  /* 手機：底部說明文字佔滿寬度，聲音開關仍在右下角、移到按鈕列上方 */
   .sound-toggle {
-    right: calc(env(safe-area-inset-right, 0px) + 14px);
-    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(18px, 4.5vh, 40px) + 132px);
+    right: calc(env(safe-area-inset-right, 0px) + 12px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .wish-panel__actions > * {

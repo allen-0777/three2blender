@@ -369,7 +369,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       const targetEmphasis = leaf.wish.id === selectedId ? 1 : 0;
       leaf.emphasis += (targetEmphasis - leaf.emphasis) * ease;
       const appear = leaf.arrive === 'fall' ? Math.min(t * 12, 1) : settled;
-      leaf.scaleNow = leaf.size * fit * appear * (1 + leaf.emphasis * 0.12);
+      // 被點開的那片在卡片後面略縮小，不從卡片兩側露出葉尖（焦點仍然跟著它）
+      leaf.scaleNow = leaf.size * fit * appear * (1 - leaf.emphasis * 0.3);
 
       dummy.position.copy(leaf.position);
       dummy.rotation.set(

@@ -34,6 +34,8 @@ export const KOMOREBI_GLSL = /* glsl */ `
     // 樹葉隨風晃動：葉縫的位置小幅來回擺動，不是整片平移
     vec2 sway = vec2( sin( t * 0.9 + q.y * 0.35 ), cos( t * 0.7 + q.x * 0.31 ) ) * 0.08;
     vec2 p = q * 2.6 + sway;
+    // domain warp：打散光斑的排列，不會一列一列像蓋章
+    p += vec2( komorebiNoise( q * 0.7 ), komorebiNoise( q * 0.7 + 5.2 ) ) * 1.8;
     float gaps = komorebiNoise( p ) * 0.6 + komorebiNoise( p * 2.4 + 7.1 + sway * 2.0 ) * 0.4;
     return smoothstep( threshold, threshold + 0.08, gaps );
   }
