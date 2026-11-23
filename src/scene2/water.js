@@ -80,8 +80,10 @@ const FRAGMENT = /* glsl */ `
       // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
       // 暗色的倒影（對岸樹林）為底，只有遠處的水面帶一點天空色；細碎的波光讓水和地面分得開
       // 天空色的漸層為底（離鏡頭越遠、越接近水平越亮），近岸帶一點對岸樹林的暗色倒影
-      float farSky = smoothstep( 6.0, 28.0, dist );
-      reflected = mix( uSkyFallback, uSkyTint, 0.45 + 0.5 * farSky );
+      // 低畫質用方向相關的樹線剪影；法線波動會扭動樹色／天空的交界。
+      float treeLine = 0.13 + 0.045 * sin( R.x * 24.0 ) + 0.025 * sin( R.z * 37.0 );
+      float skyWeight = smoothstep( treeLine - 0.045, treeLine + 0.08, R.y );
+      reflected = mix( uSkyFallback, uSkyTint, skyWeight );
     }
     reflected = min( reflected, vec3( 1.6 ) );
     float fresnel = 0.02 + 0.98 * pow( 1.0 - max( dot( N, V ), 0.0 ), 5.0 );
