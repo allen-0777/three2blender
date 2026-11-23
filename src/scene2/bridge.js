@@ -52,7 +52,7 @@ export function createBridge() {
 
   // 橋面木板（沿 z 排列，每片橫跨 x）
   const plankDepth = 0.2;
-  for (let z = zNear; z > zFar; z -= plankDepth + 0.025) {
+  for (let z = zNear; z > zFar; z -= plankDepth + 0.012) {
     const zc = z - plankDepth / 2;
     const y = bridgeDeckHeight(zc);
     const slope = Math.atan2(bridgeDeckHeight(zc + 0.1) - bridgeDeckHeight(zc - 0.1), 0.2);

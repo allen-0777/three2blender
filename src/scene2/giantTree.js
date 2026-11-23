@@ -29,7 +29,7 @@ function tube(curve, radius, { segments = 20, sides = 12, bumps = 0, bumpSeed = 
       n.copy(frames.normals[i]).multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
       // 縱向的稜：越靠近根部越明顯
       const ridge = bumps
-        ? 1 + bumps * (1 - u) * (0.55 * Math.sin(a * 5 + bumpSeed + u * 2.0) + 0.3 * Math.sin(a * 9 + bumpSeed * 2.3 - u * 3.0))
+        ? 1 + bumps * (1 - 0.6 * u) * (0.55 * Math.sin(a * 5 + bumpSeed + u * 5.0) + 0.3 * Math.sin(a * 9 + bumpSeed * 2.3 - u * 7.0) + 0.15 * Math.sin(a * 17 + u * 23.0))
         : 1;
       positions.push(point.x + n.x * r * ridge, point.y + n.y * r * ridge, point.z + n.z * r * ridge);
     }
@@ -99,7 +99,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
     base.clone().add(new THREE.Vector3(0.1, trunkHeight, 0)),
   ]);
   wood.push(
-    tube(trunkCurve, (u) => 1.75 * (1 - 0.38 * u) * (1 + 1.35 * Math.exp(-u * 8)), { segments: 30, sides: 32, bumps: 0.24, bumpSeed: 1.3 }),
+    tube(trunkCurve, (u) => 2.05 * (1 - 0.4 * u) * (1 + 1.4 * Math.exp(-u * 7)), { segments: 40, sides: 48, bumps: 0.3, bumpSeed: 1.3 }),
   );
 
   // 板根：從樹幹底部往外、往下鑽進土裡
@@ -108,7 +108,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
     const a = (i / roots) * TAU + range(rng, -0.25, 0.25);
     const dir = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
     const length = range(rng, 4.5, 7.5);
-    const start = base.clone().add(new THREE.Vector3(dir.x * 0.9, 1.6, dir.z * 0.9));
+    const start = base.clone().add(new THREE.Vector3(dir.x * 1.1, 2.2, dir.z * 1.1));
     const points = [start];
     for (let k = 1; k <= 4; k++) {
       const t = k / 4;
@@ -117,7 +117,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
       // 先貼著地面隆起，末端鑽進土裡
       points.push(new THREE.Vector3(x, groundHeight2(x, z) + 0.5 * (1 - t) - 0.25 * t * t, z));
     }
-    const r0 = range(rng, 0.6, 0.85);
+    const r0 = range(rng, 0.8, 1.1);
     wood.push(tube(new THREE.CatmullRomCurve3(points), (u) => r0 * (1 - 0.85 * u) + 0.04, { segments: 14, sides: 10 }));
   }
 
@@ -152,15 +152,15 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
       const br = r0 * (1 - 0.6 * t) * 0.62;
       wood.push(tube(bcurve, (u) => br * (1 - 0.75 * u) + 0.02, { segments: 8, sides: 7 }));
       // 第三層：細枝，末端長葉叢
-      for (let c = 0; c < 3; c++) {
+      for (let c = 0; c < 4; c++) {
         const ct = range(rng, 0.35, 1.0);
         const cp = bcurve.getPointAt(ct);
         const cdir = bcurve.getTangentAt(ct).add(new THREE.Vector3(range(rng, -1, 1), range(rng, -0.3, 0.5), range(rng, -1, 1))).normalize();
         const clen = range(rng, 1.6, 2.8);
         const ccurve = bentCurve(cp, cdir, clen, rng, 1.0);
         wood.push(tube(ccurve, (u) => br * 0.45 * (1 - 0.8 * u) + 0.012, { segments: 5, sides: 5 }));
-        tips.push({ point: ccurve.getPointAt(1), radius: range(rng, 1.7, 2.5) });
-        tips.push({ point: ccurve.getPointAt(0.55), radius: range(rng, 1.3, 1.9) });
+        tips.push({ point: ccurve.getPointAt(1), radius: range(rng, 2.0, 2.9) });
+        tips.push({ point: ccurve.getPointAt(0.55), radius: range(rng, 1.5, 2.2) });
       }
       tips.push({ point: bcurve.getPointAt(1), radius: range(rng, 1.8, 2.6) });
     }
@@ -199,7 +199,7 @@ function addMoss(material) {
         vec3 mp = vBarkPosition * 1.7;
         float mossNoise = fract( sin( dot( floor( mp ), vec3( 12.9898, 78.233, 37.719 ) ) ) * 43758.5453 ) * 0.35
           + 0.65 * ( 0.5 + 0.5 * sin( mp.x * 1.3 + sin( mp.z * 1.7 ) + mp.y * 0.6 ) );
-        float mossMask = smoothstep( 0.5, 0.85, mossNoise * ( mossUp * 0.8 + mossLow * 0.7 ) );
+        float mossMask = smoothstep( 0.4, 0.75, mossNoise * ( mossUp * 0.9 + mossLow * 0.8 ) );
         // 老樹皮偏深；青苔在板根與朝上的面
         diffuseColor.rgb *= 0.62;
         diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.1, 0.14, 0.04 ), mossMask * 0.85 );

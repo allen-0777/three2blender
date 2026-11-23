@@ -53,7 +53,7 @@ export function groundHeight2(x, z) {
   const tz = z - GIANT_TREE.z;
   h += 0.75 * Math.exp(-(tx * tx + tz * tz) / (2 * 6.5 * 6.5));
   // 遠方略微升高，地平線不會是一條平線
-  h += smooth(-z, 44, 80) * 2.2 * (0.6 + 0.4 * Math.sin(x * 0.05 + 1));
+  h += smooth(-z, 60, 120) * 1.6 * (0.6 + 0.4 * Math.sin(x * 0.05 + 1));
   return h;
 }
 
@@ -74,13 +74,13 @@ export const BRIDGE = (() => {
   const z = creekCenter(pathCenter(creekCenter(0)));
   const x = pathCenter(z);
   const half = creekHalfWidth(x) * 1.15 + 0.3;
-  return { x, z, zNear: z + half, zFar: z - half, width: 1.55, rise: 0.38 };
+  return { x, z, zNear: z + half, zFar: z - half, width: 1.55, rise: 0.24 };
 })();
 
 /** 石燈籠（沿路兩側 6 座：溪的近岸一對、橋後一對、再往神木一對） */
 export const LANTERNS = [
-  { x: -3.0, z: BRIDGE.zNear + 3.2, scale: 1.12 },
-  { x: 3.1, z: BRIDGE.zNear + 2.9, scale: 1.12 },
+  { x: -2.75, z: BRIDGE.zNear + 2.3, scale: 1.05 },
+  { x: 2.85, z: BRIDGE.zNear + 2.0, scale: 1.05 },
   { x: -2.6, z: BRIDGE.zFar - 2.4, scale: 1.0 },
   { x: 2.5, z: BRIDGE.zFar - 2.8, scale: 1.0 },
   { x: -2.3, z: -19.5, scale: 0.95 },

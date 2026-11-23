@@ -127,7 +127,7 @@ function createHaloTexture() {
 
 /** 回傳 { group, setLevel(0..), update(camera) } */
 export function createLanterns() {
-  const stone = new THREE.InstancedMesh(createStoneGeometry(), createStoneMaterial({ color: 0x938c7e, moss: 0.75 }), LANTERNS.length);
+  const stone = new THREE.InstancedMesh(createStoneGeometry(), createStoneMaterial({ color: 0xa8a092, moss: 0.65, lanternGain: 0.12 }), LANTERNS.length);
   const windowMaterial = createWindowMaterial();
   const windows = new THREE.InstancedMesh(createWindowGeometry(), windowMaterial, LANTERNS.length);
   const haloMaterial = new THREE.MeshBasicMaterial({
@@ -180,7 +180,7 @@ export function createLanterns() {
       haloMaterial.opacity = Math.min(next, 1.6) * 0.5;
       halos.visible = next > 0;
       lanternUniforms.uLanterns.value.forEach((v) => {
-        v.w = next * 1.4;
+        v.w = next * 5.0;
       });
     },
     get level() {

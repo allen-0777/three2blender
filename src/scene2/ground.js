@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { range } from '../palette.js';
 import { LANTERN_GLSL, createStoneMaterial, lanternUniforms } from './materials.js';
 import {
@@ -146,18 +147,21 @@ export function createGround2(rng, { textureSize, anisotropy }, trees) {
 
 /** 一顆不規則的石頭（低面數、雜訊擾動），所有溪石共用 */
 function rockGeometry(seed) {
-  const g = new THREE.IcosahedronGeometry(1, 2);
+  // 先合併重複頂點再擾動，法線才是平滑的（不是一面一面的低多邊形）
+  const base = new THREE.IcosahedronGeometry(1, 4);
+  base.deleteAttribute('normal');
+  base.deleteAttribute('uv');
+  const g = mergeVertices(base);
   const p = g.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
-    const n = 1 + 0.18 * Math.sin(v.x * 3.1 + seed) * Math.sin(v.y * 2.7 - seed) + 0.1 * Math.sin(v.z * 5.3 + v.x * 2.0);
+    const n = 1 + 0.16 * Math.sin(v.x * 3.1 + seed) * Math.sin(v.y * 2.7 - seed) + 0.07 * Math.sin(v.z * 5.3 + v.x * 2.0) + 0.025 * Math.sin(v.x * 13 + v.z * 11);
     v.multiplyScalar(n);
     // 底部壓平
     if (v.y < -0.2) v.y = -0.2 + (v.y + 0.2) * 0.3;
     p.setXYZ(i, v.x, v.y, v.z);
   }
-  g.deleteAttribute('uv');
   g.computeVertexNormals();
   return g;
 }
@@ -224,7 +228,7 @@ export function createStones(rng) {
       rocks.push({ x, z, s: range(rng, 0.16, 0.42) * (rng() < 0.15 ? 1.7 : 1) });
     }
   }
-  const rockMesh = new THREE.InstancedMesh(rockGeometry(2.3), createStoneMaterial({ color: 0x7d786c, moss: 0.95, mossLow: 0.6 }), rocks.length);
+  const rockMesh = new THREE.InstancedMesh(rockGeometry(2.3), createStoneMaterial({ color: 0x8e877a, moss: 0.7, mossLow: 0.35 }), rocks.length);
   rocks.forEach((r, i) => {
     dummy.position.set(r.x, Math.max(groundHeight2(r.x, r.z), WATER_LEVEL - 0.05) + r.s * 0.15, r.z);
     dummy.rotation.set(range(rng, -0.3, 0.3), rng() * Math.PI * 2, range(rng, -0.3, 0.3));

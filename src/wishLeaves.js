@@ -454,7 +454,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     /** 邊緣光與光暈的整體強度（夜晚加強，讓許願葉更顯眼） */
     setGlowBoost(boost) {
       edge.material.color.copy(edgeBase).multiplyScalar(boost);
-      halo.material.opacity = haloBase * Math.min(boost, 1.6);
+      // 光暈不跟著放大太多：夜晚一整片光暈會連成一團、壓到標題
+      halo.material.opacity = haloBase * Math.min(boost, 1.15);
     },
     has: (id) => byId.has(id),
     setSelected(id) {

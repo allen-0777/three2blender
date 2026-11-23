@@ -7,6 +7,7 @@ import { createSparkles } from '../sparkles.js';
 import { createBridge } from './bridge.js';
 import { createGiantTree } from './giantTree.js';
 import { createGround2, createStones } from './ground.js';
+import { createGrass } from './grass.js';
 import { createLanterns } from './lantern.js';
 import { sceneTwoSun } from './materials.js';
 import { createPines } from './pine.js';
@@ -14,7 +15,7 @@ import { createSky2 } from './sky.js';
 import { TIMES } from './timeOfDay.js';
 import { createWater } from './water.js';
 import {
-  GIANT_TREE, LANTERNS, WATER_LEVEL, groundHeight2, groundNormal2, isWater, pathDistance,
+  GIANT_TREE, LANTERNS, WATER_LEVEL, creekDistance, groundHeight2, groundNormal2, pathDistance,
 } from './terrain.js';
 
 // 場景二：神木小溪（_SPEC_場景豐富.md）。小徑 → 木橋跨小溪 → 盡頭的神木，兩側石燈籠，
@@ -38,28 +39,32 @@ const weighted = (list) => {
 
 // 指定位置的樹種（照概念圖：右側銀杏與黑松、左側一棵黑松、兩棵還帶綠的楓樹）
 const FIXED = [
-  { x: 7.6, z: -6.5, species: 'pine', height: 8.5 },
-  { x: -7.2, z: -12.5, species: 'pine', height: 6.4 },
+  { x: 8.8, z: -2.0, species: 'pine', height: 8.5 },
+  { x: -6.5, z: -14, species: 'pine', height: 6.4 },
   { x: 12.5, z: -17, species: 'pine', height: 7 },
-  { x: -12.5, z: 2.5, species: 'pine', height: 7.5 },
-  { x: 6.4, z: -1.0, species: 'ginkgo' },
-  { x: 10.5, z: -11.5, species: 'ginkgo' },
+  { x: -15, z: -24, species: 'pine', height: 7 },
+  { x: 7.2, z: -11.5, species: 'ginkgo' },
   { x: 13.5, z: 1.5, species: 'ginkgo' },
-  { x: 6.8, z: -16.5, species: 'ginkgo' },
+  { x: 5.8, z: -19, species: 'ginkgo' },
   { x: -13.5, z: -9, species: 'ginkgo' },
+  { x: 11, z: -24, species: 'ginkgo' },
   { x: -12, z: 5.5, species: 'green' },
   { x: 12.5, z: -20, species: 'green' },
 ];
 
-function layoutTrees(rng) {
+export function layoutTrees(rng) {
   const trees = [];
   const tooClose = (x, z, d = 2.8) => trees.some((t) => (t.x - x) ** 2 + (t.z - z) ** 2 < d * d);
   for (const f of FIXED) trees.push({ ...f, scale: range(rng, 1.05, 1.3), rotation: rng() * Math.PI * 2 });
   const tryPlace = (x, z, scale) => {
-    if (isWater(x, z, 0.35) || tooClose(x, z) || pathDistance(x, z) < 4.0) return;
+    // 離溪岸至少半個溪寬（creekDistance：0 溪中心、約 0.95 水邊）
+    if (creekDistance(x, z) < 1.5 || tooClose(x, z) || pathDistance(x, z) < 4.0) return;
     const gx = x - GIANT_TREE.x;
     const gz = z - GIANT_TREE.z;
     if (gx * gx + gz * gz < 12 * 12) return; // 神木周圍留空
+    // 從首頁鏡頭看出去右上方的一塊天空不種楓樹：午後露出藍天，夜晚看得到月亮（照概念圖）
+    const azimuth = (Math.atan2(x, 12 - z) * 180) / Math.PI;
+    if (z < 2 && azimuth > 16 && azimuth < 31) return;
     trees.push({ x, z, species: 'maple', scale, rotation: rng() * Math.PI * 2 });
   };
   // 小徑兩側
@@ -114,6 +119,7 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   scene.add(water.group);
   scene.add(createBridge());
   scene.add(createStones(rng));
+  scene.add(createGrass(rng, quality.grass ?? 2400));
   const lanterns = createLanterns();
   scene.add(lanterns.group);
 
@@ -159,14 +165,15 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   }
   for (const l of LANTERNS) litterSpots.push({ x: l.x + range(rng, -0.6, 0.6), z: l.z + range(rng, -0.4, 0.4), radius: 0.6, amount: 0.7 });
   const area = { xMin: -16, xMax: 16, zMin: -36, zMax: 7.5, top: 14 };
-  const groundLeafCapacity = quality.groundLeaves;
+  // 概念圖的地面鋪滿紅葉：場景二的地上落葉是同檔次場景一的 1.6 倍
+  const groundLeafCapacity = Math.round(quality.groundLeaves * 1.6);
   const groundLeaves = createGroundLeaves({
     count: groundLeafCapacity,
     rng,
     spots: litterSpots,
     heightFn: groundHeight2,
     normalFn: groundNormal2,
-    accept: (x, z) => !isWater(x, z, 0.06),
+    accept: (x, z) => creekDistance(x, z) > 1.02,
     area,
   });
   scene.add(groundLeaves);
@@ -254,7 +261,7 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
     },
     applyTier(tier) {
       fallingLeaves.setCount(Math.min(fallingLeafCapacity, reducedMotion ? 250 : tier.fallingLeaves));
-      groundLeaves.count = Math.min(groundLeafCapacity, tier.groundLeaves);
+      groundLeaves.count = Math.min(groundLeafCapacity, Math.round(tier.groundLeaves * 1.6));
       sparkles.setLevel(tier.sparkles);
     },
     update(dt, time, camera, drawingHeight) {

@@ -27,10 +27,10 @@ export const LANTERN_GLSL = /* glsl */ `
       float dist2 = dot( d, d );
       float facing = 0.35 + 0.65 * max( dot( n, d * inversesqrt( dist2 + 1e-4 ) ), 0.0 );
       // 平方反比，近處壓住不要爆掉；4 公尺外很快淡掉
-      float falloff = 1.0 / ( 1.0 + dist2 * 1.6 ) * ( 1.0 - smoothstep( 9.0, 30.0, dist2 ) );
+      float falloff = 1.0 / ( 1.0 + dist2 * 2.2 ) * ( 1.0 - smoothstep( 6.0, 26.0, dist2 ) );
       sum += uLanternColor * l.w * falloff * facing;
     }
-    return sum;
+    return min( sum, vec3( 2.5 ) );
   }
 `;
 
@@ -58,7 +58,7 @@ const NOISE_GLSL = /* glsl */ `
  * 在 MeshStandardMaterial 上加：世界座標的雜訊明暗、朝上表面的青苔、燈籠光。
  * kind：'stone' | 'wood'
  */
-function decorate(material, { kind, moss = 0.6, mossLow = 0 }) {
+function decorate(material, { kind, moss = 0.6, mossLow = 0, lanternGain = 1 }) {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, lanternUniforms);
     shader.vertexShader = shader.vertexShader
@@ -112,15 +112,15 @@ function decorate(material, { kind, moss = 0.6, mossLow = 0 }) {
       .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
-        totalEmissiveRadiance += diffuseColor.rgb * lanternLight( vS2World, normalize( vS2Normal ) );`,
+        totalEmissiveRadiance += diffuseColor.rgb * lanternLight( vS2World, normalize( vS2Normal ) ) * ${lanternGain.toFixed(2)};`,
       );
   };
-  material.customProgramCacheKey = () => `scene2-${kind}-${moss}-${mossLow}`;
+  material.customProgramCacheKey = () => `scene2-${kind}-${moss}-${mossLow}-${lanternGain}`;
   return material;
 }
 
-export function createStoneMaterial({ color = 0x8a857a, moss = 0.6, mossLow = 0 } = {}) {
-  return decorate(new THREE.MeshStandardMaterial({ color, roughness: 0.93, metalness: 0 }), { kind: 'stone', moss, mossLow });
+export function createStoneMaterial({ color = 0x8a857a, moss = 0.6, mossLow = 0, lanternGain = 1 } = {}) {
+  return decorate(new THREE.MeshStandardMaterial({ color, roughness: 0.93, metalness: 0 }), { kind: 'stone', moss, mossLow, lanternGain });
 }
 
 export function createWoodMaterial({ color = 0x6d4a2e } = {}) {

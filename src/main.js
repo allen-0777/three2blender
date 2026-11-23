@@ -220,6 +220,7 @@ async function loadScene(index) {
       fallingLeaves: tier.fallingLeaves,
       envSize: tier.envSize,
       giantLeaves: tier.giantLeaves,
+      grass: tier.grass,
     },
   });
   two.applyTier(tier);

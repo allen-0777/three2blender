@@ -3,7 +3,7 @@ import { createRng, pickLeafHue, range } from '../palette.js';
 import { atmosphereUniforms } from '../atmosphere.js';
 import { bentLeafGeometry } from '../leaves.js';
 import { LANTERN_GLSL, lanternUniforms } from './materials.js';
-import { WATER_LEVEL, creekCenter, creekHalfWidth } from './terrain.js';
+import { LANTERNS, WATER_LEVEL, creekCenter, creekHalfWidth } from './terrain.js';
 
 // 小溪水面：細碎的流動波紋（解析的正弦組合，取梯度當法線）、Fresnel 反射、太陽（月亮）的閃光。
 // 反射用環境 cube map：在水面上方拍一次整個場景（載入、換時段時各拍一次），
@@ -24,6 +24,7 @@ const VERTEX = /* glsl */ `
   }
 `;
 
+const LANTERN_COUNT = LANTERNS.length;
 const FRAGMENT = /* glsl */ `
   uniform samplerCube tEnv;
   uniform float uHasEnv;
@@ -71,13 +72,24 @@ const FRAGMENT = /* glsl */ `
       reflected = texture( tEnv, R, 2.2 ).rgb;
     } else {
       // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
-      reflected = mix( uSkyFallback, mapleHaze( normalize( vec3( R.x, max( R.y, 0.02 ), R.z ) ) ), smoothstep( 0.3, 0.85, R.y ) );
+      reflected = mix( uSkyFallback, mapleHaze( normalize( vec3( R.x, max( R.y, 0.02 ), R.z ) ) ) * 1.2, 0.35 + 0.65 * smoothstep( 0.15, 0.7, R.y ) );
+      // 細碎的波光，讓水面和地面分得開
+      reflected += mapleHaze( vec3( 0.0, 0.1, -1.0 ) ) * smoothstep( 0.008, 0.02, length( slope ) ) * 0.6;
     }
+    reflected = min( reflected, vec3( 2.5 ) );
     float fresnel = 0.02 + 0.98 * pow( 1.0 - max( dot( N, V ), 0.0 ), 5.0 );
     fresnel = mix( 0.2, 0.92, fresnel );
     vec3 color = mix( uBody, reflected, fresnel );
-    // 燈籠照在水面上
+    // 燈籠照在水面上，以及燈籠在水裡的倒影（波紋把它拉成一條條的暖光）
     color += uBody * lanternLight( vWorld, N ) * 0.8;
+    for ( int i = 0; i < ${LANTERN_COUNT}; i++ ) {
+      vec4 l = uLanterns[ i ];
+      if ( l.w <= 0.0 ) continue;
+      vec3 toL = l.xyz - vWorld;
+      float d = length( toL );
+      float a = max( dot( R, toL / d ), 0.0 );
+      color += uLanternColor * l.w * ( pow( a, 1500.0 ) * 0.3 + pow( a, 120.0 ) * 0.012 ) * fresnel / ( 1.0 + d * 0.15 );
+    }
     // 太陽（月亮）在波紋上的閃光
     float sunDot = max( dot( R, uSunDirW ), 0.0 );
     color += uSunColorW * ( pow( sunDot, 1200.0 ) * 8.0 + pow( sunDot, 120.0 ) * 0.15 ) * uGlitter;
