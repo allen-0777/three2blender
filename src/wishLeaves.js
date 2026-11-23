@@ -19,6 +19,10 @@ const EDGE_WIDTH = 0.19;
 
 const TAU = Math.PI * 2;
 const DEFAULT_FOCUS = 11;
+// 中央標題的大致範圍（畫面座標：中心 0、邊緣 ±1，上為正）
+const TITLE_ZONE = { x: 0.44, top: 0.24, bottom: -0.24 };
+// 自己剛留下的那片：邊緣光與光暈加強，在一整面許願葉裡也找得到
+const FRESH_GLOW = 1.9;
 // 葉片大小原本是照 50° 垂直視角調的
 const REFERENCE_HALF_TAN = Math.tan((25 * Math.PI) / 180);
 const easeOutCubic = (t) => 1 - (1 - t) ** 3;
@@ -199,19 +203,37 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     const u = leaf.featured ? leaf.u * 0.4 : leaf.u;
     const v = leaf.featured ? 0.3 + leaf.v * 0.3 : leaf.v;
     leaf.home.set(u * halfWidth, 0.5 + v * (top - 0.5), cameraBase.z - depth);
-    // 避開前景樹枝佔用的右上角（keepOut：畫面座標，中心 0、邊緣 1）
-    if (keepOut) {
-      const screenX = leaf.home.x / (depth * halfTan * camera.aspect);
-      const screenY = (leaf.home.y - cameraBase.y) / (depth * halfTan);
-      if (screenX > keepOut.x - 0.08 && screenY > keepOut.y - 0.12) {
-        leaf.home.y = cameraBase.y + (keepOut.y - 0.12 - 0.25 * leaf.v) * depth * halfTan;
+    const toScreenX = depth * halfTan * camera.aspect;
+    const toScreenY = depth * halfTan;
+    let screenX = leaf.home.x / toScreenX;
+    let screenY = (leaf.home.y - cameraBase.y) / toScreenY;
+    // 避開中央標題「楓葉季」：自己剛留下的那片移到標題正下方（標題與按鈕之間，背景較暗、最顯眼），
+    // 其他的往左右推出標題範圍
+    if (Math.abs(screenX) < TITLE_ZONE.x && screenY > TITLE_ZONE.bottom && screenY < TITLE_ZONE.top) {
+      if (leaf.featured) {
+        leaf.home.y = cameraBase.y + (TITLE_ZONE.bottom - 0.16 - 0.06 * leaf.v) * toScreenY;
+      } else {
+        const side = screenX < 0 ? -1 : 1;
+        leaf.home.x = side * (TITLE_ZONE.x + 0.04 + Math.abs(screenX) * 0.5) * toScreenX;
       }
+      screenX = leaf.home.x / toScreenX;
+      screenY = (leaf.home.y - cameraBase.y) / toScreenY;
+    }
+    // 避開前景樹枝佔用的右上角（keepOut：畫面座標，中心 0、邊緣 1）
+    if (keepOut && screenX > keepOut.x - 0.08 && screenY > keepOut.y - 0.12) {
+      leaf.home.y = cameraBase.y + (keepOut.y - 0.12 - 0.25 * leaf.v) * toScreenY;
     }
   }
 
+  const glowLevel = new THREE.Color();
   function syncColors() {
-    leaves.forEach((leaf, i) => body.setColorAt(i, leaf.color));
-    if (body.instanceColor) body.instanceColor.needsUpdate = true;
+    leaves.forEach((leaf, i) => {
+      body.setColorAt(i, leaf.color);
+      glowLevel.setScalar(leaf.featured ? FRESH_GLOW : 1);
+      edge.setColorAt(i, glowLevel);
+      halo.setColorAt(i, glowLevel);
+    });
+    for (const mesh of [body, edge, halo]) if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     body.count = edge.count = halo.count = leaves.length;
   }
 
@@ -236,7 +258,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       u: range(rng, -1, 1),
       v: rng(),
       depthT: rng(),
-      size: featured ? 0.62 : range(rng, 0.44, 0.56),
+      size: featured ? 0.7 : range(rng, 0.44, 0.56),
       color: new THREE.Color(pick(rng, WISH_COLORS)),
       phase: rng() * TAU,
       phase2: rng() * TAU,
@@ -343,7 +365,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       edge.setMatrixAt(i, dummy.matrix);
 
       // 光暈永遠面向鏡頭，輕微呼吸
-      const pulse = 1 + Math.sin(time * 1.6 + leaf.phase) * 0.1 * motion + leaf.emphasis * 0.35;
+      const pulse =
+        1 + Math.sin(time * 1.6 + leaf.phase) * (leaf.featured ? 0.22 : 0.1) * motion + leaf.emphasis * 0.35 + (leaf.featured ? 0.3 : 0);
       haloDummy.position.copy(leaf.position);
       haloDummy.quaternion.copy(camera.quaternion);
       haloDummy.scale.setScalar(leaf.scaleNow * 2.7 * pulse);

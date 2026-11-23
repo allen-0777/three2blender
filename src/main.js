@@ -87,7 +87,7 @@ const fallingLeaves = createFallingLeaves({
 scene.add(fallingLeaves.mesh);
 
 // 空氣裡的灰塵（只在光柱裡看得見）與慢慢閃爍的金色光點
-const sparkles = createSparkles({ rng, sun: environment.sun, sunDirection, dust: reducedMotion ? 500 : 1400, gold: 160 });
+const sparkles = createSparkles({ rng, sun: environment.sun, sunDirection, dust: reducedMotion ? 500 : 1400, gold: 260 });
 scene.add(sparkles.points);
 
 // 許願楓葉：每片對應資料庫裡的一則留言
@@ -98,6 +98,7 @@ scene.add(wishLeaves.group);
 const framing = createFraming();
 camera.add(framing.group);
 scene.add(camera);
+post.setForeground(framing.group);
 
 // ---- 鏡頭：36 mm 寬 16:9 片門，焦距隨畫面比例配合 ----
 const lens = { focalLength: 35, focus: 11 };
@@ -186,9 +187,11 @@ window.__visual = {
   renderer,
   scene,
   ambience,
-  /** 驗收用：固定鏡頭位置與注視點（null 還原成預設的滑鼠視差鏡頭） */
+  /** 驗收用：固定鏡頭位置、注視點與（可選）對焦距離；null 還原成預設的滑鼠視差鏡頭 */
   setPose(pose) {
-    posed = pose ? { position: new THREE.Vector3(...pose.position), target: new THREE.Vector3(...pose.target) } : null;
+    posed = pose
+      ? { position: new THREE.Vector3(...pose.position), target: new THREE.Vector3(...pose.target), focus: pose.focus ?? null }
+      : null;
   },
   info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, ...post.info() }),
   /** 除錯／效能量測用：直接切換後期效果（{ dof, glow, rays, auxScale }） */
@@ -251,7 +254,8 @@ renderer.setAnimationLoop((now) => {
   wishLeaves.update(dt, time);
 
   // 對焦：平常停在讓整面許願牆清楚的距離；點開某片時慢慢拉到那一片，關卡片後回來
-  lens.focus += (wishLeaves.focusDepth() - lens.focus) * (1 - Math.exp(-dt * 2.2));
+  const focusTarget = posed?.focus ?? wishLeaves.focusDepth();
+  lens.focus += (focusTarget - lens.focus) * (1 - Math.exp(-dt * 2.2));
 
   komorebiUniforms.uKomorebiTime.value = reducedMotion ? 0 : time;
   sparkles.update(reducedMotion ? time * 0.3 : time, camera, renderer.getDrawingBufferSize(drawingSize).y);

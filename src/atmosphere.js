@@ -74,6 +74,16 @@ THREE.ShaderChunk.fog_fragment = /* glsl */ `
 #endif
 `;
 
+// 陰影柔邊：r187 的 PCF 用逐像素旋轉的 Vogel disk（IGN 雜訊）。樹冠全是小葉片、幾乎每片都在半影裡，
+// 逐像素的雜訊在葉子上變成一整片規則的網點。改用固定角度：半影仍然柔和（每個取樣本身是硬體 2×2 PCF），
+// 但不再有網點。同樣必須在任何材質編譯之前改。
+{
+  const noisy = 'float phi = interleavedGradientNoise( gl_FragCoord.xy ) * PI2;';
+  if (THREE.ShaderChunk.shadowmap_pars_fragment.includes(noisy)) {
+    THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fragment.replaceAll(noisy, 'float phi = 0.7;');
+  }
+}
+
 /** 場景用的霧物件（顏色只給不走自訂 chunk 的材質當後備） */
 export function createFog() {
   const [r, g, b] = ATMOSPHERE.haze;

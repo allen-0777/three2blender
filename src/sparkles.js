@@ -40,12 +40,12 @@ const VERTEX = /* glsl */ `
       // 灰塵：前向散射，背光時幾乎看不見
       float mu = max( dot( viewDir, uSunDir ), 0.0 );
       float scatter = 0.06 + pow( mu, 6.0 ) * 1.4;
-      vColor = vec3( 1.0, 0.78, 0.52 ) * visible * scatter * 2.2;
+      vColor = vec3( 1.0, 0.78, 0.52 ) * visible * scatter * 4.0;
       gl_PointSize = aSeed.w * uPixelScale / distance;
     } else {
       // 金色光點：大部分時間很暗，偶爾慢慢亮起來
       float twinkle = pow( 0.5 + 0.5 * sin( uTime * ( 0.35 + aSeed.y * 0.9 ) + aSeed.x * 17.0 ), 6.0 );
-      vColor = vec3( 1.0, 0.72, 0.3 ) * ( 0.05 + twinkle * 3.2 ) * ( 0.45 + 0.55 * visible );
+      vColor = vec3( 1.0, 0.72, 0.3 ) * ( 0.06 + twinkle * 5.0 ) * ( 0.45 + 0.55 * visible );
       gl_PointSize = aSeed.w * uPixelScale / distance;
     }
     // 太小的點不要閃爍：保底 1.5 px，亮度按面積折回
@@ -86,7 +86,7 @@ export function createSparkles({ rng, sun, sunDirection, dust = 1400, gold = 160
     seeds[i * 4 + 1] = range(rng, 0.5, 1.4);
     seeds[i * 4 + 2] = isGold ? 1 : 0;
     // 世界尺寸（公尺 × 像素比例）：灰塵很細，金點略大
-    seeds[i * 4 + 3] = isGold ? range(rng, 0.018, 0.034) : range(rng, 0.006, 0.014);
+    seeds[i * 4 + 3] = isGold ? range(rng, 0.026, 0.046) : range(rng, 0.008, 0.016);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));

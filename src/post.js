@@ -9,6 +9,9 @@ import { SENSOR_HEIGHT } from './lens.js';
 //   → 合成 + 對比調色 + 暗角 + tone mapping（ACES Filmic，全程只做這一次）+ sRGB 輸出
 // 主畫面解析度固定跟著 renderer 的 drawing buffer；效能不夠時先降輔助 pass（auxScale）。
 
+/** 前景層用的 layer：主畫面的鏡頭只看 layer 0 */
+export const FOREGROUND_LAYER = 1;
+
 const FULLSCREEN_VERTEX = /* glsl */ `
   varying vec2 vUv;
   void main() {
@@ -102,16 +105,16 @@ const BRIGHT_FRAGMENT = /* glsl */ `
   }
 `;
 
-// 9-tap 高斯（利用線性取樣合併成 5 次取樣）
+// 9-tap 高斯（利用線性取樣合併成 5 次取樣）；alpha 一起模糊（景深的前景覆蓋量也要柔化）
 const BLUR_FRAGMENT = /* glsl */ `
   varying vec2 vUv;
   uniform sampler2D tColor;
   uniform vec2 uStep;
   void main() {
-    vec3 color = texture2D(tColor, vUv).rgb * 0.227027;
-    color += (texture2D(tColor, vUv + uStep * 1.384615).rgb + texture2D(tColor, vUv - uStep * 1.384615).rgb) * 0.316216;
-    color += (texture2D(tColor, vUv + uStep * 3.230769).rgb + texture2D(tColor, vUv - uStep * 3.230769).rgb) * 0.070270;
-    gl_FragColor = vec4(color, 1.0);
+    vec4 color = texture2D(tColor, vUv) * 0.227027;
+    color += (texture2D(tColor, vUv + uStep * 1.384615) + texture2D(tColor, vUv - uStep * 1.384615)) * 0.316216;
+    color += (texture2D(tColor, vUv + uStep * 3.230769) + texture2D(tColor, vUv - uStep * 3.230769)) * 0.070270;
+    gl_FragColor = color;
   }
 `;
 
@@ -154,7 +157,7 @@ const VOLUME_FRAGMENT = /* glsl */ `
   float beamPattern( vec3 p ) {
     vec2 q = p.xz + uSunDir.xz * ( ( 6.0 - p.y ) / uSunDir.y );
     float n = beamNoise( q * 0.55 ) * 0.65 + beamNoise( q * 1.4 + 3.1 ) * 0.35;
-    return 0.15 + 1.7 * smoothstep( 0.42, 0.78, n );
+    return 0.08 + 2.0 * smoothstep( 0.45, 0.76, n );
   }
   void main() {
     float z = texture2D( tDepth, vUv ).x;
@@ -220,6 +223,8 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
   uniform sampler2D tGlow1;
   uniform sampler2D tGlow2;
   uniform sampler2D tRays;
+  uniform sampler2D tForeground;
+  uniform float uForeground;
   uniform float uGlow;
   uniform float uRays;
   uniform float uVignette;
@@ -227,7 +232,8 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
   uniform float uContrast;
   ${DEPTH_GLSL}
   void main() {
-    vec3 color = texture2D(tColor, vUv).rgb;
+    // 壓住極少數過亮的像素（太陽邊緣的葉緣），避免閃爍的白點
+    vec3 color = min(texture2D(tColor, vUv).rgb, vec3(40.0));
 
     #ifdef USE_DOF
       float depth = linearDepth(vUv);
@@ -248,6 +254,12 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
       // 體積光柱已經只積分到表面為止，直接疊加
       color += texture2D(tRays, vUv).rgb * uRays;
     #endif
+
+    // 前景層（已預先模糊、預乘 alpha 的樹枝剪影），疊在最上面
+    if (uForeground > 0.5) {
+      vec4 fg = texture2D(tForeground, vUv);
+      color = color * (1.0 - fg.a) + fg.rgb;
+    }
 
     // 調色：以 18% 灰為中心拉開對比（暗部更深、亮部更透），再讓暗部略偏冷、亮部偏暖
     float lum = max(dot(color, vec3(0.2126, 0.7152, 0.0722)), 1e-5);
@@ -314,7 +326,11 @@ export function createPost(renderer, { sunDirection }) {
   // 光柱：raysTemp 放原始結果，raysTarget 放橫向模糊，縱向模糊再寫回 raysTemp 給合成用
   const raysTarget = createTarget();
   const raysTemp = createTarget();
-  const allTargets = [sceneTarget, cocTarget, dofTarget, raysTarget, raysTemp, ...glow.flatMap((g) => [g.a, g.b])];
+  // 前景層：鏡頭前很近的物件（前景樹枝）單獨畫在 1/4 解析度、透明底的 buffer，再用高斯模糊成柔和的剪影。
+  // 這種距離的模糊圈遠超過景深 pass 的上限，直接交給景深會有階梯狀的邊緣。
+  const foregroundTarget = createTarget();
+  const foregroundTemp = createTarget();
+  const allTargets = [sceneTarget, cocTarget, dofTarget, raysTarget, raysTemp, foregroundTarget, foregroundTemp, ...glow.flatMap((g) => [g.a, g.b])];
 
   const depthUniforms = {
     tDepth: { value: sceneTarget.depthTexture },
@@ -352,7 +368,7 @@ export function createPost(renderer, { sunDirection }) {
     uFar: depthUniforms.uFar,
     uMaxDistance: { value: 48 },
     uShadowReady: { value: 0 },
-    uIntensity: { value: 0.05 },
+    uIntensity: { value: 0.075 },
   };
   // 兩種份量（都在 1/4 解析度：光柱是低頻的，深度感知模糊補回邊緣）：high 32 步，mid 14 步
   const volumeMaterials = {
@@ -370,6 +386,8 @@ export function createPost(renderer, { sunDirection }) {
       tGlow2: { value: glow[2].a.texture },
       // 模糊後的光柱最後落在 raysTemp（見 renderVolume）
       tRays: { value: raysTemp.texture },
+      tForeground: { value: null },
+      uForeground: { value: 0 },
       uGlow: { value: look.glow },
       uRays: { value: look.rays },
       uVignette: { value: look.vignette },
@@ -419,6 +437,8 @@ export function createPost(renderer, { sunDirection }) {
     const raysDivisor = 4;
     raysTarget.setSize(even((width / raysDivisor) * aux), even((height / raysDivisor) * aux));
     raysTemp.setSize(raysTarget.width, raysTarget.height);
+    foregroundTarget.setSize(even(width / 4), even(height / 4));
+    foregroundTemp.setSize(foregroundTarget.width, foregroundTarget.height);
 
     bokehMaterial.uniforms.uTexel.value.set(1 / cocTarget.width, 1 / cocTarget.height);
     depthUniforms.uMaxCoc.value = Math.max(look.maxCoc * height, 2);
@@ -437,6 +457,27 @@ export function createPost(renderer, { sunDirection }) {
   syncDefines();
 
   const forward = new THREE.Vector3();
+  let foreground = null;
+  const savedClear = new THREE.Color();
+
+  /** 前景層：畫在透明底上，兩輪橫直高斯（每輪取樣間距放大）模糊成失焦的剪影 */
+  function renderForeground(camera) {
+    const layers = camera.layers.mask;
+    camera.layers.set(FOREGROUND_LAYER);
+    renderer.getClearColor(savedClear);
+    const savedAlpha = renderer.getClearAlpha();
+    renderer.setClearColor(0x000000, 0);
+    renderer.setRenderTarget(foregroundTarget);
+    renderer.clear();
+    renderer.render(foreground, camera);
+    renderer.setClearColor(savedClear, savedAlpha);
+    camera.layers.mask = layers;
+    const spread = Math.max(1, foregroundTarget.height / 450);
+    for (const scale of [1, 1.5]) {
+      blur(foregroundTarget, foregroundTemp, (scale * spread) / foregroundTarget.width, 0);
+      blur(foregroundTemp, foregroundTarget, 0, (scale * spread) / foregroundTarget.height);
+    }
+  }
 
   /** 太陽在鏡頭後方時光柱幾乎看不到（前向散射），直接略過這個 pass */
   function sunFacing(camera) {
@@ -465,6 +506,11 @@ export function createPost(renderer, { sunDirection }) {
     supported,
     settings,
     look,
+
+    /** 前景層物件（所有子物件要在 FOREGROUND_LAYER，主畫面不會畫到它） */
+    setForeground(object) {
+      foreground = object;
+    },
 
     /** 體積光柱用的太陽（DirectionalLight，需開陰影） */
     setSun(light) {
@@ -513,6 +559,9 @@ export function createPost(renderer, { sunDirection }) {
       if (settings.dof) {
         draw(cocMaterial, cocTarget);
         draw(bokehMaterial, dofTarget);
+        // 光圈取樣數有限，大的模糊圈（前景樹枝）邊緣會有顆粒；半解析度再過一次小高斯抹平
+        blur(dofTarget, cocTarget, 1 / dofTarget.width, 0);
+        blur(cocTarget, dofTarget, 0, 1 / cocTarget.height);
       }
 
       const facing = settings.rays ? sunFacing(camera) : 0;
@@ -528,6 +577,10 @@ export function createPost(renderer, { sunDirection }) {
         });
       }
       if (rays) renderVolume(camera);
+      const showForeground = Boolean(foreground?.visible);
+      if (showForeground) renderForeground(camera);
+      compositeMaterial.uniforms.tForeground.value = foregroundTarget.texture;
+      compositeMaterial.uniforms.uForeground.value = showForeground ? 1 : 0;
 
       compositeMaterial.uniforms.uGlow.value = settings.glow ? look.glow : 0;
       compositeMaterial.uniforms.uRays.value = rays ? look.rays * facing : 0;

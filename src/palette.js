@@ -31,7 +31,7 @@ export function pickLeafHue(rng) {
 }
 
 export const SKY = {
-  top: 0x6c7bb0,
+  top: 0x9c8891,
   mid: 0xf29a5c,
   horizon: 0xffdfae,
 };

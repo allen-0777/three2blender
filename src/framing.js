@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { createRng, range } from './palette.js';
 import { bentLeafGeometry } from './leaves.js';
-import { leafTransmission } from './leafShading.js';
+import { FOREGROUND_LAYER } from './post.js';
 
-// 前景框景：畫面右上角一根很近的楓枝（約 1.5 公尺），逆光下偏暗、葉緣透紅，
-// 在景深裡糊成柔和的剪影，替畫面加一層前景。掛在鏡頭底下跟著鏡頭走，
+// 前景框景：畫面右上角一根很近的楓枝（約 1.5 公尺），逆光下偏暗、少數葉子透紅。
+// 它在獨立的前景層（post.js 的 FOREGROUND_LAYER）畫成不受光的剪影，再整層高斯模糊，
+// 像大光圈下對不到焦的前景。掛在鏡頭底下跟著鏡頭走，
 // 只佔右上角（畫面座標 x > KEEP_OUT.x、y > KEEP_OUT.y），不擋中間的標題、按鈕與許願葉。
 
 const DISTANCE = 1.5;
@@ -51,7 +52,8 @@ function taperedTube(curve, r0, r1, segments = 24, sides = 7) {
 function buildBranch() {
   const rng = createRng(4242);
   const group = new THREE.Group();
-  const barkMaterial = new THREE.MeshStandardMaterial({ color: 0x0b0705, roughness: 1 });
+  // 逆光剪影：不受光，顏色直接是線性 HDR 值（很暗的樹皮）
+  const barkMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color().setRGB(0.012, 0.007, 0.005), fog: false });
   const main = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0.25, 0.12, 0),
     new THREE.Vector3(-0.15, 0.0, 0.02),
@@ -83,8 +85,7 @@ function buildBranch() {
   }
 
   // 葉子：沿每根細枝的後半段與主枝末端成簇長出，葉面大致朝鏡頭、葉尖下垂
-  const leafMaterial = new THREE.MeshStandardMaterial({ roughness: 0.95, side: THREE.DoubleSide });
-  leafMaterial.onBeforeCompile = leafTransmission({ transmit: 0.7, forward: 2.5, layers: 0.15 });
+  const leafMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, fog: false });
   const spots = [];
   curves.forEach(({ curve }, i) => {
     const leaves = i === 0 ? 7 : 6;
@@ -100,14 +101,17 @@ function buildBranch() {
     dummy.scale.setScalar(range(rng, 0.1, 0.15));
     dummy.updateMatrix();
     leaves.setMatrixAt(i, dummy.matrix);
-    // 偏暗的深紅與暗橘（前景在逆光裡）
-    leaves.setColorAt(i, color.setHex(rng() < 0.7 ? 0x8f1716 : 0xb4361a).multiplyScalar(range(rng, 0.22, 0.38)));
+    // 大多是逆光裡的暗紅剪影，約三成被太陽從背後透亮成朱紅
+    if (rng() < 0.3) color.setRGB(range(rng, 0.32, 0.55), range(rng, 0.04, 0.08), 0.012);
+    else color.setRGB(range(rng, 0.045, 0.09), 0.01, 0.006);
+    leaves.setColorAt(i, color);
   });
   leaves.instanceMatrix.needsUpdate = true;
   leaves.instanceColor.needsUpdate = true;
   group.add(leaves);
 
   group.traverse((child) => {
+    child.layers.set(FOREGROUND_LAYER);
     child.castShadow = false;
     child.receiveShadow = false;
     child.frustumCulled = false;
@@ -127,7 +131,7 @@ export function createFraming() {
       const halfHeight = DISTANCE * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
       const halfWidth = halfHeight * camera.aspect;
       // 整根樹枝約佔畫面寬度的 22%（直式畫面改用高度為準，免得太細小）
-      const scale = Math.max(halfWidth * 0.48, halfHeight * 0.3);
+      const scale = Math.max(halfWidth * 0.6, halfHeight * 0.36);
       branch.scale.setScalar(scale);
       branch.position.set(halfWidth * 1.0, halfHeight * 0.92, -DISTANCE);
       branch.rotation.set(0, 0, -0.12);

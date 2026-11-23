@@ -265,7 +265,7 @@ const gaussian = (rng) => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(TAU * r
 
 /**
  * 靜止鋪在地面的落葉：貼著地表高度與法線，不懸空。
- * 約七成堆在 spots（成堆成簇、彼此交疊），其餘零星散落。
+ * 約八成堆在 spots（成堆成簇、彼此交疊），其餘零星散落。
  */
 export function createGroundLeaves({ count, rng, spots = [] }) {
   const mesh = createLeafMesh(count, rng);
@@ -293,10 +293,10 @@ export function createGroundLeaves({ count, rng, spots = [] }) {
     let x;
     let z;
     let pile = 0;
-    if (spots.length > 0 && rng() < 0.7) {
+    if (spots.length > 0 && rng() < 0.8) {
       const spot = pickSpot();
-      const gx = gaussian(rng) * spot.radius * 0.6;
-      const gz = gaussian(rng) * spot.radius * 0.6;
+      const gx = gaussian(rng) * spot.radius * 0.5;
+      const gz = gaussian(rng) * spot.radius * 0.5;
       x = spot.x + gx;
       z = spot.z + gz;
       // 堆的中央疊得比較厚
@@ -308,7 +308,7 @@ export function createGroundLeaves({ count, rng, spots = [] }) {
     const scale = 0.09 + 0.18 * rng() ** 1.4;
     groundNormal(x, z, normal);
     // 葉片中央對折後最低點在中肋，抬高一點點讓邊緣翹起、中肋貼地；堆裡的葉子疊高一些
-    dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.06), z);
+    dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.09), z);
 
     align.setFromUnitVectors(up, normal);
     spin.setFromAxisAngle(up, rng() * TAU);
