@@ -446,12 +446,13 @@ body {
   }
 }
 
-/* 卡片打開時標題淡出，不從卡片兩側露出筆畫 */
-.title {
+/* 卡片打開時標題淡出，不從卡片兩側露出筆畫。
+   .title 本身有 fill-mode both 的進場動畫，會蓋掉 opacity，所以淡出的是裡面的文字 */
+.title > * {
   transition: opacity 0.4s ease;
 }
 
-body:has(#wish-card-dialog[open]) .title {
+body:has(#wish-card-dialog[open]) .title > * {
   opacity: 0;
 }
 
