@@ -73,7 +73,7 @@ export const SUN_DIRECTION = (() => {
 export const ATMOSPHERE = {
   haze: [0.26, 0.15, 0.1], // 地平線附近、背向太陽的霧色
   hazeSun: [0.95, 0.5, 0.2], // 朝向太陽時霧被照亮的顏色
-  density: 0.0046, // 地面高度（y = 0）的霧密度（每公尺）
+  density: 0.0038, // 地面高度（y = 0）的霧密度（每公尺）
   falloff: 0.16, // 高度衰減：越高越稀薄
   farStart: 62, // 從這個距離開始額外淡進霧色，藏住地表邊界
   farEnd: 116,

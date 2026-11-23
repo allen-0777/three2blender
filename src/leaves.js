@@ -241,7 +241,7 @@ export function createLitterSpots({ trees, rng }) {
       const distance = range(rng, 0.4, 2.2) * tree.scale;
       const x = tree.x + Math.cos(angle) * distance;
       const z = tree.z + Math.sin(angle) * distance;
-      if (inArea(x, z)) spots.push({ x, z, radius: range(rng, 0.45, 1.2), amount: range(rng, 0.6, 1) });
+      if (inArea(x, z)) spots.push({ x, z, radius: range(rng, 0.6, 1.5), amount: range(rng, 0.7, 1) });
     }
   }
   // 小徑邊緣被踢到兩側堆起來
@@ -293,7 +293,7 @@ export function createGroundLeaves({ count, rng, spots = [] }) {
     let x;
     let z;
     let pile = 0;
-    if (spots.length > 0 && rng() < 0.8) {
+    if (spots.length > 0 && rng() < 0.85) {
       const spot = pickSpot();
       const gx = gaussian(rng) * spot.radius * 0.5;
       const gz = gaussian(rng) * spot.radius * 0.5;
@@ -305,7 +305,7 @@ export function createGroundLeaves({ count, rng, spots = [] }) {
       x = range(rng, AREA.xMin - 4, AREA.xMax + 4);
       z = range(rng, AREA.zMin - 6, AREA.zMax + 4);
     }
-    const scale = 0.09 + 0.18 * rng() ** 1.4;
+    const scale = 0.09 + 0.17 * rng() ** 1.4;
     groundNormal(x, z, normal);
     // 葉片中央對折後最低點在中肋，抬高一點點讓邊緣翹起、中肋貼地；堆裡的葉子疊高一些
     dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.09), z);

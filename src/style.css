@@ -498,6 +498,14 @@ body {
     font-size: 1rem;
   }
 
+  /* 手機：底部說明文字很靠近右下角，聲音開關移到左上角 */
+  .sound-toggle {
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    left: calc(env(safe-area-inset-left, 0px) + 14px);
+    right: auto;
+    bottom: auto;
+  }
+
   .wish-panel__actions > * {
     flex: 1;
   }

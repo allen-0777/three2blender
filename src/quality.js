@@ -11,7 +11,7 @@ export const TIERS = {
     barkNormals: true,
     shadowMapSize: 2048,
     fallingLeaves: 380,
-    groundLeaves: 4200,
+    groundLeaves: 9000,
     rays: 'full',
     sparkles: 1,
   },
@@ -26,7 +26,7 @@ export const TIERS = {
     barkNormals: true,
     shadowMapSize: 2048,
     fallingLeaves: 280,
-    groundLeaves: 2600,
+    groundLeaves: 6000,
     sparkles: 0.6,
   },
   low: {
@@ -39,7 +39,7 @@ export const TIERS = {
     barkNormals: false,
     shadowMapSize: 1024,
     fallingLeaves: 200,
-    groundLeaves: 1800,
+    groundLeaves: 3200,
     sparkles: 0.3,
   },
 };

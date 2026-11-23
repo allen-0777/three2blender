@@ -157,7 +157,8 @@ const VOLUME_FRAGMENT = /* glsl */ `
   float beamPattern( vec3 p ) {
     vec2 q = p.xz + uSunDir.xz * ( ( 6.0 - p.y ) / uSunDir.y );
     float n = beamNoise( q * 0.55 ) * 0.65 + beamNoise( q * 1.4 + 3.1 ) * 0.35;
-    return 0.08 + 2.0 * smoothstep( 0.45, 0.76, n );
+    // 只在樹冠高度以下拉成光束；樹梢以上的開闊天空不做條紋（低角度的太陽會把它拉成橫紋）
+    return mix( 0.08 + 2.0 * smoothstep( 0.45, 0.76, n ), 0.5, smoothstep( 4.5, 8.0, p.y ) );
   }
   void main() {
     float z = texture2D( tDepth, vUv ).x;

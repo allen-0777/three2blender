@@ -108,6 +108,28 @@ function currentPixelRatio() {
   return Math.min(window.devicePixelRatio || 1, tier.pixelRatioCap, pixelRatioLimit);
 }
 
+// 標題在畫面上的實際範圍（含一點邊距），換算成畫面座標給許願葉避開
+// （.title 本身是滿版的置中容器，量的是裡面的標題文字）
+const titleParts = [...document.querySelectorAll('.title > *')];
+function titleZone() {
+  const rects = titleParts.map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0);
+  if (rects.length === 0) return null;
+  const rect = {
+    left: Math.min(...rects.map((r) => r.left)),
+    right: Math.max(...rects.map((r) => r.right)),
+    top: Math.min(...rects.map((r) => r.top)),
+    bottom: Math.max(...rects.map((r) => r.bottom)),
+  };
+  const pad = 18;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  return {
+    x: Math.max(Math.abs((rect.left - pad) / w * 2 - 1), Math.abs((rect.right + pad) / w * 2 - 1)),
+    top: 1 - ((rect.top - pad) / h) * 2,
+    bottom: 1 - ((rect.bottom + pad) / h) * 2,
+  };
+}
+
 function resize() {
   const { innerWidth: width, innerHeight: height } = window;
   if (width <= 0 || height <= 0) return;
@@ -120,7 +142,9 @@ function resize() {
   camera.updateProjectionMatrix();
   post.resize();
   framing.layout(camera);
-  wishLeaves.layout();
+  const zone = titleZone();
+  if (zone) wishLeaves.setTitleZone(zone);
+  else wishLeaves.layout();
 }
 
 function applyTier() {

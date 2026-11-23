@@ -19,10 +19,10 @@ const EDGE_WIDTH = 0.19;
 
 const TAU = Math.PI * 2;
 const DEFAULT_FOCUS = 11;
-// 中央標題的大致範圍（畫面座標：中心 0、邊緣 ±1，上為正）
-const TITLE_ZONE = { x: 0.44, top: 0.24, bottom: -0.24 };
+// 中央標題的預設範圍（畫面座標：中心 0、邊緣 ±1，上為正）；main.js 會依實際的 DOM 位置更新
+const DEFAULT_TITLE_ZONE = { x: 0.44, top: 0.24, bottom: -0.24 };
 // 自己剛留下的那片：邊緣光與光暈加強，在一整面許願葉裡也找得到
-const FRESH_GLOW = 1.9;
+const FRESH_GLOW = 2.6;
 // 葉片大小原本是照 50° 垂直視角調的
 const REFERENCE_HALF_TAN = Math.tan((25 * Math.PI) / 180);
 const easeOutCubic = (t) => 1 - (1 - t) ** 3;
@@ -179,6 +179,7 @@ function createMeshes(capacity) {
  * keepOut：{ x, y } 畫面右上角保留給前景樹枝的範圍（framing.js），葉子的停留位置會避開。
  */
 export function createWishLeaves({ camera, cameraBase, reducedMotion = false, capacity = 140, keepOut = null }) {
+  let TITLE_ZONE = { ...DEFAULT_TITLE_ZONE };
   const { body, edge, halo } = createMeshes(capacity);
   const group = new THREE.Group();
   group.add(body, edge, halo);
@@ -209,12 +210,24 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     let screenY = (leaf.home.y - cameraBase.y) / toScreenY;
     // 避開中央標題「楓葉季」：自己剛留下的那片移到標題正下方（標題與按鈕之間，背景較暗、最顯眼），
     // 其他的往左右推出標題範圍
-    if (Math.abs(screenX) < TITLE_ZONE.x && screenY > TITLE_ZONE.bottom && screenY < TITLE_ZONE.top) {
+    // 停留時還會飄動（driftX／driftY 公尺），範圍再放寬這麼多
+    const marginX = (leaf.driftX * 1.1) / toScreenX;
+    const marginY = (leaf.driftY * 1.1) / toScreenY;
+    if (
+      Math.abs(screenX) < TITLE_ZONE.x + marginX &&
+      screenY > TITLE_ZONE.bottom - marginY &&
+      screenY < TITLE_ZONE.top + marginY
+    ) {
       if (leaf.featured) {
-        leaf.home.y = cameraBase.y + (TITLE_ZONE.bottom - 0.16 - 0.06 * leaf.v) * toScreenY;
-      } else {
+        leaf.home.y = cameraBase.y + (TITLE_ZONE.bottom - 0.04 - 0.04 * leaf.v) * toScreenY;
+      } else if (TITLE_ZONE.x + marginX < 0.62) {
         const side = screenX < 0 ? -1 : 1;
-        leaf.home.x = side * (TITLE_ZONE.x + 0.04 + Math.abs(screenX) * 0.5) * toScreenX;
+        leaf.home.x = side * (TITLE_ZONE.x + marginX + 0.03 + Math.abs(screenX) * 0.4) * toScreenX;
+      } else {
+        // 直式畫面：標題幾乎和畫面一樣寬，改成往標題上方或下方移
+        const above = leaf.v > 0.45;
+        const y = above ? TITLE_ZONE.top + marginY + 0.04 + 0.2 * leaf.v : TITLE_ZONE.bottom - marginY - 0.04 - 0.2 * leaf.v;
+        leaf.home.y = Math.max(cameraBase.y + y * toScreenY, 0.45);
       }
       screenX = leaf.home.x / toScreenX;
       screenY = (leaf.home.y - cameraBase.y) / toScreenY;
@@ -229,7 +242,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   function syncColors() {
     leaves.forEach((leaf, i) => {
       body.setColorAt(i, leaf.color);
-      glowLevel.setScalar(leaf.featured ? FRESH_GLOW : 1);
+      // 遠近層次：越遠的許願葉邊緣光與光暈越淡，近的與自己剛留下的最亮
+      glowLevel.setScalar(leaf.featured ? FRESH_GLOW : 1.15 - 0.55 * leaf.depthT);
       edge.setColorAt(i, glowLevel);
       halo.setColorAt(i, glowLevel);
     });
@@ -350,7 +364,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       const targetEmphasis = leaf.wish.id === selectedId ? 1 : 0;
       leaf.emphasis += (targetEmphasis - leaf.emphasis) * ease;
       const appear = leaf.arrive === 'fall' ? Math.min(t * 12, 1) : settled;
-      leaf.scaleNow = leaf.size * fit * appear * (1 + leaf.emphasis * 0.3);
+      leaf.scaleNow = leaf.size * fit * appear * (1 + leaf.emphasis * 0.12);
 
       dummy.position.copy(leaf.position);
       dummy.rotation.set(
@@ -409,6 +423,11 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     group,
     add,
     layout,
+    /** 標題在畫面上的範圍（中心 0、邊緣 ±1，上為正；左右對稱取 x 半寬），許願葉的停留位置會避開 */
+    setTitleZone(zone) {
+      TITLE_ZONE = { ...zone };
+      layout();
+    },
     update,
     pick: pickWish,
     has: (id) => byId.has(id),
