@@ -297,7 +297,10 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
     // 極輕微的抖動，消除天空漸層的色階
-    gl_FragColor.rgb += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+    // 三角分布的抖動（兩個 IGN 相加），比均勻分布更能打散漸層的色階
+    float ditherA = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    float ditherB = fract(52.9829189 * fract(dot(gl_FragCoord.xy + 37.0, vec2(0.06711056, 0.00583715))));
+    gl_FragColor.rgb += (ditherA + ditherB - 1.0) / 255.0;
   }
 `;
 
@@ -497,7 +500,7 @@ export function createPost(renderer, { sunDirection }) {
     renderer.setClearColor(savedClear, savedAlpha);
     camera.layers.mask = layers;
     const spread = Math.max(1, foregroundTarget.height / 450);
-    for (const scale of [0.6, 0.85]) {
+    for (const scale of [0.45, 0.65]) {
       blur(foregroundTarget, foregroundTemp, (scale * spread) / foregroundTarget.width, 0);
       blur(foregroundTemp, foregroundTarget, 0, (scale * spread) / foregroundTarget.height);
     }

@@ -78,6 +78,10 @@ body {
   margin-right: -0.45em;
   text-transform: uppercase;
   opacity: 0.92;
+  /* 英文副標細，壓在亮的霧上要多一圈柔和的暗影才讀得清楚 */
+  text-shadow:
+    0 1px 3px rgba(60, 18, 4, 0.75),
+    0 0 18px rgba(60, 18, 4, 0.45);
 }
 
 @keyframes rise {
@@ -507,12 +511,10 @@ body:has(#wish-card-dialog[open]) .title {
     font-size: 1rem;
   }
 
-  /* 手機：底部說明文字很靠近右下角，聲音開關移到左上角 */
+  /* 手機：底部說明文字佔滿寬度，聲音開關仍在右下角、移到按鈕列上方 */
   .sound-toggle {
-    top: calc(env(safe-area-inset-top, 0px) + 14px);
-    left: calc(env(safe-area-inset-left, 0px) + 14px);
-    right: auto;
-    bottom: auto;
+    right: calc(env(safe-area-inset-right, 0px) + 14px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(18px, 4.5vh, 40px) + 132px);
   }
 
   .wish-panel__actions > * {

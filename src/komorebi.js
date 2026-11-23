@@ -33,7 +33,7 @@ export const KOMOREBI_GLSL = /* glsl */ `
     float t = uKomorebiTime;
     // 樹葉隨風晃動：葉縫的位置小幅來回擺動，不是整片平移
     vec2 sway = vec2( sin( t * 0.9 + q.y * 0.35 ), cos( t * 0.7 + q.x * 0.31 ) ) * 0.08;
-    vec2 p = q * 1.6 + sway;
+    vec2 p = q * 2.6 + sway;
     float gaps = komorebiNoise( p ) * 0.6 + komorebiNoise( p * 2.4 + 7.1 + sway * 2.0 ) * 0.4;
     return smoothstep( threshold, threshold + 0.08, gaps );
   }
@@ -46,7 +46,7 @@ export const KOMOREBI_GLSL = /* glsl */ `
   vec3 komorebi( vec3 worldPos, vec3 lit, vec3 open, float cover ) {
     if ( cover < 0.01 ) return lit;
     float dapple = mix( 0.3, 1.5, komorebiGaps( worldPos, 0.5 ) );
-    vec3 spots = open * komorebiGaps( worldPos + vec3( 3.7, 0.0, 1.3 ), 0.7 ) * 0.85;
+    vec3 spots = open * komorebiGaps( worldPos + vec3( 3.7, 0.0, 1.3 ), 0.72 ) * 0.9;
     vec3 shade = max( open - lit, vec3( 0.0 ) );
     float shaded = dot( shade, vec3( 0.333 ) ) / max( dot( open, vec3( 0.333 ) ), 1e-4 );
     return mix( lit, lit * dapple + spots * shaded, cover );

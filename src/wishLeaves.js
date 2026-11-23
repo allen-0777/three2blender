@@ -33,7 +33,9 @@ function createHaloTexture() {
   canvas.width = canvas.height = size;
   const context = canvas.getContext('2d');
   const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  gradient.addColorStop(0, 'rgba(255,255,255,0.85)');
+  // 中心一點小而亮的光核：許願葉獨有的記號，一般落葉沒有
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.06, 'rgba(255,255,255,0.9)');
   gradient.addColorStop(0.3, 'rgba(255,255,255,0.32)');
   gradient.addColorStop(1, 'rgba(255,255,255,0)');
   context.fillStyle = gradient;
@@ -224,9 +226,13 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
         const side = screenX < 0 ? -1 : 1;
         leaf.home.x = side * (TITLE_ZONE.x + marginX + 0.03 + Math.abs(screenX) * 0.4) * toScreenX;
       } else {
-        // 直式畫面：標題幾乎和畫面一樣寬，改成往上移到標題上方的林間（直式畫面上半部本來就空）
-        const y = TITLE_ZONE.top + marginY + 0.04 + 0.55 * leaf.v;
-        leaf.home.y = cameraBase.y + Math.min(y, 0.85) * toScreenY;
+        // 直式畫面：標題幾乎和畫面一樣寬，改成上下錯開——一部分到標題上方的樹冠，
+        // 一部分到標題下方、樹幹之間的高度，不要全擠在同一塊
+        const above = leaf.v > 0.28;
+        const y = above
+          ? Math.min(TITLE_ZONE.top + marginY + 0.04 + 0.62 * (leaf.v - 0.28), 0.85)
+          : TITLE_ZONE.bottom - marginY - 0.03 - 0.3 * leaf.v;
+        leaf.home.y = Math.max(cameraBase.y + y * toScreenY, 0.6);
       }
       screenX = leaf.home.x / toScreenX;
       screenY = (leaf.home.y - cameraBase.y) / toScreenY;
