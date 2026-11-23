@@ -49,6 +49,19 @@ npm test        # 驗證規則、速率限制與 API 的自動化測試
 
 `POST` 的規則：去除前後空白、拒絕空白內容與超長內容、拒絕含網址（`http`、`www` 等）或不當字詞的留言（400）；每個 IP 每分鐘最多 3 則（429，附 `Retry-After`）。
 
+## 畫面與畫質分級
+
+場景先畫進線性 HDR render target，再經後期合成（景深、lens glow、光柱、暗角），最後做一次 ACES Filmic tone mapping 輸出 sRGB。
+依裝置自動選 `high`／`mid`／`low` 三檔，幀時間過長時會自動往下降；也可用網址參數指定：
+
+| 參數 | 說明 |
+| --- | --- |
+| `?quality=high\|mid\|low` | 強制使用某一檔（不自動降級） |
+| `?dof=0` | 關閉景深 |
+| `?mm=28` | 指定鏡頭焦距（mm，36 mm 寬 16:9 片門） |
+
+地表與樹皮貼圖來自 Poly Haven（CC0），來源見 `public/textures/CREDITS.md`。視覺驗收腳本與截圖在 `_qa/visual/`。
+
 ## 楓樹模型
 
 `npm run models` 會用 Blender 重新產生 `public/models/maple_trees.glb`（需要本機安裝 Blender）。

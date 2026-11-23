@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { range } from './palette.js';
+import { groundHeight } from './environment.js';
+import { leafTransmission } from './leafShading.js';
 
 // 楓樹模型由 blender/generate_trees.py 產生（npm run models）。
 // GLB 內每個變體有兩個網格：Maple_<n>_Trunk 與 Maple_<n>_Foliage，
@@ -8,19 +10,128 @@ import { range } from './palette.js';
 const MODEL_URL = '/models/maple_trees.glb';
 const MESH_NAME = /^Maple_(\d+)_(Trunk|Foliage)/;
 
-const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2317, roughness: 1 });
-const foliageMaterial = new THREE.MeshStandardMaterial({
-  vertexColors: true,
-  roughness: 0.85,
-  side: THREE.DoubleSide,
-});
-// 模擬逆光下葉片的透光感：讓葉片帶一點自身顏色的發光
-foliageMaterial.onBeforeCompile = (shader) => {
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <emissivemap_fragment>',
-    '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.38;',
-  );
-};
+// 樹幹：GLB 沒有 UV，用世界座標三向投影（triplanar）貼上樹皮。
+// 側面投影的 V 軸是世界 Y，樹皮的直向裂紋會沿著樹幹走。
+function createTrunkMaterial({ barkNormals }) {
+  const material = new THREE.MeshStandardMaterial({ color: 0x3a2317, roughness: 1 });
+  const uniforms = {
+    uBarkMap: { value: null },
+    uBarkNormal: { value: null },
+    uBarkArm: { value: null },
+    uBarkReady: { value: 0 },
+  };
+
+  const loader = new THREE.TextureLoader();
+  const load = (name, color) =>
+    loader.loadAsync(`/textures/bark_brown_02_${name}_1k.jpg`).then((texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 4;
+      if (color) texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    });
+  Promise.all([load('diff', true), barkNormals ? load('nor_gl') : null, barkNormals ? load('arm') : null])
+    .then(([map, normal, arm]) => {
+      uniforms.uBarkMap.value = map;
+      uniforms.uBarkNormal.value = normal;
+      uniforms.uBarkArm.value = arm;
+      uniforms.uBarkReady.value = 1;
+      // 樹皮貼圖本身偏暗，載入後把底色調亮、偏暖
+      material.color.setRGB(1.15, 0.86, 0.68);
+    })
+    // 載不到時維持原本的純色樹幹
+    .catch((error) => console.warn('樹皮貼圖載入失敗，改用純色樹幹', error));
+
+  if (barkNormals) material.defines = { BARK_NORMALS: '' };
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vBarkPosition;\nvarying vec3 vBarkNormal;',
+      )
+      .replace(
+        '#include <project_vertex>',
+        /* glsl */ `#include <project_vertex>
+        mat4 barkMatrix = modelMatrix;
+        #ifdef USE_INSTANCING
+          barkMatrix = modelMatrix * instanceMatrix;
+        #endif
+        vBarkPosition = ( barkMatrix * vec4( transformed, 1.0 ) ).xyz;
+        vBarkNormal = normalize( mat3( barkMatrix ) * objectNormal );`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        /* glsl */ `#include <common>
+        varying vec3 vBarkPosition;
+        varying vec3 vBarkNormal;
+        uniform sampler2D uBarkMap;
+        uniform sampler2D uBarkNormal;
+        uniform sampler2D uBarkArm;
+        uniform float uBarkReady;
+        const float BARK_SCALE = 0.85;
+        vec3 barkWeights() {
+          vec3 w = pow( abs( normalize( vBarkNormal ) ), vec3( 4.0 ) );
+          return w / ( w.x + w.y + w.z );
+        }
+        vec4 barkSample( sampler2D tex, vec3 w ) {
+          vec3 p = vBarkPosition * BARK_SCALE;
+          return texture2D( tex, p.zy ) * w.x + texture2D( tex, p.xz ) * w.y + texture2D( tex, p.xy ) * w.z;
+        }`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        /* glsl */ `#include <map_fragment>
+        vec3 barkW = barkWeights();
+        if ( uBarkReady > 0.5 ) {
+          diffuseColor.rgb *= barkSample( uBarkMap, barkW ).rgb * 2.2;
+          #ifdef BARK_NORMALS
+            diffuseColor.rgb *= mix( 1.0, barkSample( uBarkArm, barkW ).r, 0.85 );
+          #endif
+        }`,
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        /* glsl */ `#include <roughnessmap_fragment>
+        #ifdef BARK_NORMALS
+          if ( uBarkReady > 0.5 ) roughnessFactor *= barkSample( uBarkArm, barkW ).g;
+        #endif`,
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        /* glsl */ `#include <normal_fragment_maps>
+        #ifdef BARK_NORMALS
+          if ( uBarkReady > 0.5 ) {
+            // 三向投影法線（UDN 混合）：各投影面的切線空間法線加回世界法線
+            vec3 barkN = normalize( vBarkNormal );
+            vec3 p = vBarkPosition * BARK_SCALE;
+            vec3 tx = texture2D( uBarkNormal, p.zy ).xyz * 2.0 - 1.0;
+            vec3 ty = texture2D( uBarkNormal, p.xz ).xyz * 2.0 - 1.0;
+            vec3 tz = texture2D( uBarkNormal, p.xy ).xyz * 2.0 - 1.0;
+            const float strength = 1.4;
+            tx = vec3( tx.xy * strength + barkN.zy, barkN.x );
+            ty = vec3( ty.xy * strength + barkN.xz, barkN.y );
+            tz = vec3( tz.xy * strength + barkN.xy, barkN.z );
+            vec3 worldNormal = normalize( tx.zyx * barkW.x + ty.xzy * barkW.y + tz.xyz * barkW.z );
+            normal = normalize( ( viewMatrix * vec4( worldNormal, 0.0 ) ).xyz );
+          }
+        #endif`,
+      );
+  };
+  return material;
+}
+
+// 樹冠：葉色烘焙在頂點色。透光跟著太陽走（見 leafShading.js），不再無條件自發光；
+// 樹冠內部彼此的陰影只保留一部分，模擬光在葉層之間散開。
+function createFoliageMaterial() {
+  const material = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.82,
+    side: THREE.DoubleSide,
+  });
+  material.onBeforeCompile = leafTransmission({ transmit: 0.8, forward: 1.6, shadowKeep: 0.45 });
+  return material;
+}
 
 /** 載入 GLB，回傳 [{ trunk: BufferGeometry, foliage: BufferGeometry }, ...] */
 async function loadVariants() {
@@ -67,7 +178,8 @@ function createInstances(geometry, material, placements, tint) {
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
   placements.forEach((p, i) => {
-    dummy.position.set(p.x, 0, p.z);
+    // 根部略沉進地表，避免緩坡上露出樹幹底面
+    dummy.position.set(p.x, groundHeight(p.x, p.z) - 0.06, p.z);
     dummy.rotation.y = p.rotation;
     dummy.scale.setScalar(p.scale);
     dummy.updateMatrix();
@@ -84,7 +196,9 @@ function createInstances(geometry, material, placements, tint) {
 }
 
 /** 建立楓林：每個變體的枝幹與葉片各用一個 InstancedMesh 繪製 */
-export async function createForest(rng) {
+export async function createForest(rng, { barkNormals = true } = {}) {
+  const trunkMaterial = createTrunkMaterial({ barkNormals });
+  const foliageMaterial = createFoliageMaterial();
   const variants = await loadVariants();
   const groups = variants.map(() => []);
   for (const placement of layoutTrees(rng)) {

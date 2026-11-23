@@ -8,8 +8,15 @@ import { leafGeometry } from './leaves.js';
 const WISH_COLORS = [0xffc94d, 0xffa53a, 0xff7a3a, 0xf45a3c, 0xffd978, 0xff8f5a];
 const RIM_COLOR = 0xfff3d0;
 const HALO_COLOR = 0xffd58a;
+// 後期（ACES）會壓暗接近 1 的亮部並讓亮黃色變淡，描邊與自發光補償回來
+// （自發光用葉色再乘一次自己，保住飽和度）
+const RIM_BOOST = 1.7;
+const BODY_GLOW = 0.85;
 
 const TAU = Math.PI * 2;
+const DEFAULT_FOCUS = 11;
+// 葉片大小原本是照 50° 垂直視角調的
+const REFERENCE_HALF_TAN = Math.tan((25 * Math.PI) / 180);
 const easeOutCubic = (t) => 1 - (1 - t) ** 3;
 
 function createHaloTexture() {
@@ -34,7 +41,7 @@ function createMeshes(capacity) {
   bodyMaterial.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <emissivemap_fragment>',
-      '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.55;',
+      `#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * ( 0.3 + 0.7 * diffuseColor.rgb ) * ${BODY_GLOW.toFixed(2)};`,
     );
   };
   const body = new THREE.InstancedMesh(leafGeometry, bodyMaterial, capacity);
@@ -42,7 +49,13 @@ function createMeshes(capacity) {
   // 描邊：同一輪廓放大一圈、不寫入深度，先畫描邊再畫葉片
   const rim = new THREE.InstancedMesh(
     leafGeometry,
-    new THREE.MeshBasicMaterial({ color: RIM_COLOR, side: THREE.DoubleSide, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      // 略高於 1 的 HDR 值：經過 tone mapping 後描邊仍是畫面裡最亮的線條，
+      // 也只有許願葉會帶到一點 lens glow
+      color: new THREE.Color(RIM_COLOR).multiplyScalar(RIM_BOOST),
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
     capacity,
   );
 
@@ -52,9 +65,12 @@ function createMeshes(capacity) {
       map: createHaloTexture(),
       color: HALO_COLOR,
       transparent: true,
-      opacity: 0.4,
+      // 後期管線在線性空間混合，疊加的光暈比以前在 sRGB 空間混合時強，所以不透明度調低
+      opacity: 0.22,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      // 疊加混合不能再混霧色，否則整塊方形會被霧染亮
+      fog: false,
     }),
     capacity,
   );
@@ -86,7 +102,10 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   let clock = 0;
 
   const motion = reducedMotion ? 0.3 : 1;
-  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  // 鏡頭焦距會隨畫面比例調整（main.js），每次 layout 重新取視角
+  let halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  // 沒有選取時的對焦距離（沿鏡頭前方的公尺數），見 focusDepth()
+  let restFocus = DEFAULT_FOCUS;
 
   /** 依目前畫面比例，算出葉子停留的世界座標 */
   function placeHome(leaf) {
@@ -156,11 +175,30 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       remove(leaves.find((other) => other.wish.id !== selectedId && other !== leaf) ?? leaves[0]);
     }
     syncColors();
+    updateRestFocus();
     return true;
   }
 
+  /** 讓所有許願葉都盡量清楚的對焦距離：景深模糊量正比於 |1/對焦 − 1/距離|，取倒數的中點 */
+  function updateRestFocus() {
+    if (leaves.length === 0) {
+      restFocus = DEFAULT_FOCUS;
+      return;
+    }
+    let nearest = Infinity;
+    let farthest = 0;
+    for (const leaf of leaves) {
+      const depth = cameraBase.z - leaf.home.z;
+      nearest = Math.min(nearest, depth);
+      farthest = Math.max(farthest, depth);
+    }
+    restFocus = 2 / (1 / nearest + 1 / farthest);
+  }
+
   function layout() {
+    halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     leaves.forEach(placeHome);
+    updateRestFocus();
   }
 
   const dummy = new THREE.Object3D();
@@ -170,7 +208,8 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     clock += dt;
     const ease = 1 - Math.exp(-dt * 8);
     // 直式（手機）畫面可用寬度窄，葉子縮小一些才不會擠成一團
-    const fit = THREE.MathUtils.clamp(camera.aspect / 1.1, 0.6, 1);
+    // 焦距較長（視角較窄）時同樣大小的葉子在畫面上會變大，依視角縮回接近原本的佔比
+    const fit = THREE.MathUtils.clamp(camera.aspect / 1.1, 0.6, 1) * Math.min(1, (halfTan / REFERENCE_HALF_TAN) ** 0.75);
 
     for (let i = 0; i < leaves.length; i++) {
       const leaf = leaves[i];
@@ -227,6 +266,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   }
 
   const toLeaf = new THREE.Vector3();
+  const forward = new THREE.Vector3();
 
   /**
    * 用 raycaster 的射線找出被點到的楓葉，回傳對應的留言或 null。
@@ -261,6 +301,16 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     has: (id) => byId.has(id),
     setSelected(id) {
       selectedId = id;
+    },
+    /**
+     * 後期景深用的對焦距離（沿鏡頭前方的公尺數）。
+     * 有選取的楓葉時回傳那一片的距離，否則回傳讓整面許願牆都清楚的距離。
+     */
+    focusDepth() {
+      const leaf = selectedId === null ? null : byId.get(selectedId);
+      if (!leaf) return restFocus;
+      camera.getWorldDirection(forward);
+      return Math.max(toLeaf.copy(leaf.position).sub(camera.position).dot(forward), 1);
     },
     /** 留言在畫面上的位置（CSS 像素），給測試與除錯用 */
     screenPosition(id) {

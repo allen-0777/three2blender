@@ -1,0 +1,100 @@
+# 楓葉季視覺升級報告（P0）
+
+日期：2026-11-23　分支：`feature/visual-upgrade`（由 `feature/wish-wall` 開出）　資料夾：`~/Desktop/Three2blender-visual`
+規格：`_SPEC_視覺升級.md`。未 push、未部署、未讀 `.env*`、未呼叫 RoamerHost、未動 `~/Desktop/Three2blender` 與 `server/`。
+
+## 結論
+
+P0 七項都已實作，高檔桌面全部看得到；許願牆回歸全數通過；手機（低檔）可操作。
+
+| 驗收 | 結果 |
+| --- | --- |
+| `npm test` | 16/16 通過 |
+| `_qa/run-qa.mjs`（既有許願牆瀏覽器回歸） | 27/27 通過（唯一的 HTTP 400 是腳本刻意送出含網址留言的預期拒絕） |
+| `_qa/visual/run-visual.mjs`（新增的視覺驗收） | 20/20 通過，頁面無 console error／warning |
+| curl 驗收 | `_qa/visual/curl-acceptance.txt`：healthz、列表、計數、貼圖、GLB 皆 200；未知 API 404；空白／含網址留言 400 |
+
+## 幀時間（headless Chrome，ANGLE Metal／Apple M3）
+
+| 情境 | 實際 backing store | 平均幀時間 | 約略 fps |
+| --- | --- | --- | --- |
+| 桌面 high（1440×900 @2×，DOF＋glow＋光柱，MSAA 2） | 2880×1800 | 23.3 ms（p95 33.4） | 43 |
+| 桌面 mid（@1.5×，glow，MSAA 4） | 2160×1350 | 18.6 ms（p95 33.3） | 54 |
+| 桌面 low（@1.5×，只有 tone mapping） | 2160×1350 | 17.6 ms（p95 33.3） | 57 |
+| 手機模擬 390×844 @3×（自動選 low，pixel ratio 1.5，CPU 4× 降速） | 585×1266 | 16.6 ms（p95 16.7） | 60 |
+
+這些是這台 Mac 的 headless 數字，上限被 60 Hz 鎖住。**沒有在實體手機上量過**；手機那一列的 GPU 仍是 M3，只能當相對參考。
+高檔在 2880×1800 沒有到 60 fps（43 fps）；自動降級的門檻是連續兩個 2.5 秒視窗平均超過 30 ms，所以這台機器會停在高檔。
+
+## 做了什麼（對應規格第 6 節 P0）
+
+1. **色彩與曝光管線**（`src/post.js`、`src/main.js`）
+   場景畫進線性 HalfFloat render target，後期合成後只做一次 **ACES Filmic** tone mapping（`renderer.toneMapping`，three 只在畫到螢幕的最後一個 pass 套用），`outputColorSpace = SRGBColorSpace`。曝光可調：`window.__visual.setExposure(n)`（預設 1.0）。後期有輕微暗角（0.3），CSS 暗角在後期啟用時由 0.45 降到 0.22，不疊兩層重的。
+2. **電影鏡頭**（`src/lens.js`、`src/post.js`）
+   沿用 `CAMERA_BASE`／`LOOK_AT` 與視差，沒有加任何行走或機位。36 mm 寬 16:9 片門：橫式 **35 mm（垂直視角 32.3°）**；直式畫面逐步換成 22 mm（49.4°），兩側的樹才留在畫面裡。
+   景深用薄透鏡公式（f/1.4），半解析度算模糊圈再做圓形光圈收集，模糊圈上限為畫面高度的 0.9%。預設焦點 11.06 m：取許願葉最近與最遠距離的倒數中點，整面許願牆的模糊圈都小於約 1 px。點開某片時焦點在約 1 秒內拉到那一片（實測 11.06 → 8.40 m），關卡片後回到 11.05 m。
+   Lens glow 只吃亮度超過 1.6 的 HDR 高光（太陽、太陽旁的天空、許願葉描邊），權重 0.28；一般落葉的亮度到不了門檻。
+3. **大氣**（`src/atmosphere.js`、`src/environment.js`）
+   覆寫 three 的霧 chunk，改成指數高度霧，霧色隨視線與太陽夾角變化；天空 shader 在地平線用同一個函式，遠景溶進它背後那塊天空的顏色，地平面沒有色差線。太陽圓盤、平行光、霧的受光方向、光柱共用 `palette.js` 的同一個方向。
+   另加了螢幕空間光柱（高檔限定，1/4 解析度、32 取樣）：來源是同一份高光，被樹冠擋住的地方就沒有光；9 m 內的表面只吃 30%，不洗白許願葉。
+4. **陰影**
+   **three r187 已移除 `PCFSoftShadowMap`**（設了會警告並退回 PCF），所以用 `PCFShadowMap`：r187 的 PCF 本身是 5 點 Vogel disk × 硬體線性比較的柔邊，`shadow.radius = 4`。`autoUpdate = false` 維持。bias −0.0012、normalBias 0.1。
+5. **地面與樹幹**
+   地表：Poly Haven「Forest Leaves 02」albedo／法線／ARM（AO＋roughness），頂點色染成暖色並保留中央較深的小徑；遠處混入放大的同一張貼圖打散重複感；地形加了緩坡（小徑保持平坦），樹、地面葉、飄落葉的落點都用同一個高度函式。
+   樹幹：GLB 沒有 UV，用世界座標三向投影貼「Bark Brown 02」（albedo＋法線＋AO／roughness），直向裂紋沿樹幹走。
+6. **葉片與落葉**（`src/leaves.js`、`src/leafShading.js`）
+   一般落葉改用沿中肋對折、葉尖微捲的立體葉片；正反面色差、程序化葉脈；翻轉角與側向滑移耦合（直立時滑得快、掉得快），40% 整圈翻滾、其餘擺盪；共用陣風。
+   透光改成跟著每一盞直射光與其陰影走，**一般葉與樹冠已沒有無條件 emissive**。地面葉貼地表高度與法線，約三成翻面。
+   許願葉材質完全獨立（仍有自發光、描邊、光暈）。
+7. **品質分級與減少動態**（`src/quality.js`）
+
+   | 檔次 | 自動選到的條件 | pixel ratio 上限 | 後期 | 貼圖 | 飄落葉／地面葉 |
+   | --- | --- | --- | --- | --- | --- |
+   | high | 桌面、> 4 核心且記憶體 > 4 GB | 2 | tone map＋DOF＋glow＋光柱 | 地表 2k | 850／2600 |
+   | mid | 核心 ≤ 4 或記憶體 ≤ 4 GB | 1.5 | tone map＋glow | 地表 2k | 650／2000 |
+   | low | 寬 ≤ 768 px 或觸控裝置 | 1.5 | 只有 tone map | 地表 1k、樹皮無法線 | 450／1200 |
+
+   **預設檔次**：桌面 high、手機 low。幀時間過長時依序：輔助 pass 解析度減半 → 降一檔 → 主畫面降到 1×（只降不升）。實測把 CPU 降速 20×，26 秒內 high → low，換檔後點許願葉仍正確開卡片。
+   `prefers-reduced-motion`：飄落葉 250 片、速度 0.4、鏡頭不漂移不視差，許願葉照樣浮現（實測 67 片）。這項是用瀏覽器的 reduced-motion 模擬自動檢查的，沒有另外人工目視。
+
+## 許願牆相容
+
+- `window.__wishWall` 欄位未刪；新增的除錯介面放在另一個 `window.__visual`。
+- 2× backing store 與換檔後，hover 游標、點擊、觸控開卡片都通過；raycaster 仍用 CSS 座標。
+- 表單開著時畫面減半更新，把資源讓給輸入。
+- `wishLeaves.js` 的改動只限相容：新增 `focusDepth()`；視角改由 `layout()` 重新讀取；葉片大小依視角縮回接近原本的畫面佔比；光暈關掉 fog 並把不透明度由 0.4 調到 0.22（線性空間疊加比原本強）；描邊與自發光補償 ACES。
+- `_qa/run-qa.mjs` 只加了 `QA_OUT` 環境變數，回歸時不覆蓋 `_qa/` 既有截圖；既有截圖沒有動。
+
+## 截圖（`_qa/visual/`）
+
+`01-desktop-default`（high）、`02-desktop-wish-settled`、`03-desktop-card`、`04-desktop-dof-off-or-mid`（mid）、`05-mobile-default`、`06-mobile-form`、`07-desktop-low`、`08-desktop-auto-degraded`（自動降到 low 後點開卡片）、`09-desktop-reduced-motion`。
+桌面截圖以 2× 擷取後縮到 1440 px 寬再 commit（原檔共約 39 MB）。
+
+## 使用的技能（MengTo/Skills，MIT）
+
+已複製到 `.claude/skills/`，授權在 `.claude/skills/MengTo-Skills-LICENSE`。實作時讀過並遵循：
+`control-camera-lenses`（片門／焦距、帶正負號的模糊圈、前景不被後景滲入、最後才 tone map；`src/lens.js` 的兩個函式改寫自其 `lens.js` 並註明出處）、`3d-falling-leaves`、`3d-sky-background`、`3d-retina-resolution`、`3d-high-resolution-textures`、`3d-sky-rays`。
+`forest-floor-specimen`、`animate-procedural-birds`、`3d-ultra-realistic-water`、`3d-four-seasons` 只複製、未使用（P1）。
+未提交的部分：各 demo 的 `three.min.js`，以及 `3d-ultra-realistic-water/demo/index.html`（820 KB）。
+沒有使用 Momiji Creek 的任何原始碼、shader、幾何或貼圖。
+
+## 貼圖來源與授權
+
+Poly Haven，CC0：Forest Leaves 02、Bark Brown 02（作者 Rob Tuytel）。明細在 `public/textures/CREDITS.md`。共 6.9 MB；高檔開場實際下載約 6.2 MB（地表 2k albedo＋法線、ARM 1k、樹皮三張 1k）。
+
+## 與規格不同或需要 Allen 知道的地方
+
+- **構圖變緊了**：原本垂直視角 50°（換算約 21.7 mm），規格要求 35–50 mm，所以橫式改為 35 mm。同一個機位，但畫面比原本窄約四成。想更接近舊構圖可用 `?mm=28` 比較後再決定。
+- **太陽方向改了**：原本在左前方 34°，35 mm 下會落在畫面外。改到左前方 5°、仰角 12.5°，落在樹廊開口上方；影子因此朝鏡頭方向。
+- **陰影類型**不是規格寫的 `PCFSoftShadowMap`（r187 已移除），原因見上。
+
+## 已知限制
+
+- 沒有實機手機數據；float render target 不支援時的退路（直接畫到螢幕）沒有裝置可測。
+- 樹冠在 2× 近看有 PCF 取樣的細網點（葉片自我陰影）；已把樹冠接收陰影的比例降到 45% 減輕，沒有完全消除。
+- GLB 樹冠裡的大塊低面數體積在逆光下偏亮，像紅色燈籠；要改善得重出樹模型。
+- 卡片對話框本身有 CSS 背景模糊，開卡片時的拉焦在畫面上幾乎看不出來（數值有確認）。
+- 沒有做「儲存偏好」；每次載入重新判斷檔次。降級後不會自動升回來。
+- 貼圖是原始 JPG，沒有轉 WebP／KTX2。
+- 飄落葉最近離鏡頭 2.5 m，偶爾會有一片很大的葉子飄過畫面上緣（見 `04` 截圖）。
+- `_claude_visual.log` 是原本就在的空檔案，沒有 commit。

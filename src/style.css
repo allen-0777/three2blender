@@ -31,6 +31,15 @@ body {
   );
 }
 
+/* 後期管線已有鏡頭暗角時，CSS 這層只留一點給底部文字墊底，避免兩層疊得太重 */
+.has-post .vignette {
+  background: radial-gradient(
+    ellipse at 50% 42%,
+    transparent 55%,
+    rgba(48, 16, 6, 0.22) 100%
+  );
+}
+
 .title {
   position: fixed;
   inset: 0;

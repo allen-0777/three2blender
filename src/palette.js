@@ -6,7 +6,7 @@ export const LEAF_COLORS = [
 
 export const SKY = {
   top: 0x6c7bb0,
-  mid: 0xf6ae78,
+  mid: 0xf29a5c,
   horizon: 0xffdfae,
 };
 
@@ -25,3 +25,24 @@ export function createRng(seed) {
 
 export const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 export const range = (rng, min, max) => min + rng() * (max - min);
+
+// ---- 照明與大氣：天空、霧、太陽、光柱共用同一組設定 ----
+
+/** 指向太陽的單位向量：低角度、在鏡頭前方偏左（逆光），保持在主鏡頭的畫面內 */
+export const SUN_DIRECTION = (() => {
+  const azimuth = (-5 * Math.PI) / 180; // 由 -Z（鏡頭前方）往左
+  const elevation = (12.5 * Math.PI) / 180;
+  return {
+    x: Math.sin(azimuth) * Math.cos(elevation),
+    y: Math.sin(elevation),
+    z: -Math.cos(azimuth) * Math.cos(elevation),
+  };
+})();
+
+/** 線性空間的大氣顏色（r, g, b），天空 shader 與霧 chunk 都由這裡取值 */
+export const ATMOSPHERE = {
+  haze: [0.5, 0.27, 0.15], // 地平線附近、背向太陽的霧色
+  hazeSun: [0.9, 0.46, 0.19], // 朝向太陽時霧被照亮的顏色
+  density: 0.0105, // 地面高度（y = 0）的霧密度（每公尺）
+  falloff: 0.14, // 高度衰減：越高越稀薄
+};

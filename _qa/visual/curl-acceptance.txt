@@ -1,0 +1,14 @@
+# curl 驗收（本機 JSON file store，PORT=3100，2026-11-23 08:38）
+GET /healthz -> 200 application/json; charset=utf-8 30B
+{"status":"ok","store":"file"}
+GET /api/wishes/count -> 200 application/json; charset=utf-8 12B
+{"count":67}
+GET /api/wishes?limit=2 -> 200 application/json; charset=utf-8 284B
+{"wishes":[{"id":67,"nickname":"視覺驗收","message":"升級後的楓林，願望一樣看得清楚 🍁","created_at":"2026-11-23T00:36:09.601Z"},{"id":66,"nickname":"另一位訪客","message":"從別的裝置送來
+GET /textures/forest_leaves_02_diffuse_2k.jpg -> 200 image/jpeg 1668009B
+GET /textures/bark_brown_02_diff_1k.jpg -> 200 image/jpeg 659592B
+GET /models/maple_trees.glb -> 200 model/gltf-binary 4294588B
+GET /api/nope -> 404 application/json; charset=utf-8 31B
+{"error":"找不到這個 API"}
+POST /api/wishes (空白) -> {"error":"請寫下你的願望"} 400
+POST /api/wishes (含網址) -> {"error":"留言不能包含網址"} 400
