@@ -131,7 +131,7 @@ export function createFraming() {
       const halfHeight = DISTANCE * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
       const halfWidth = halfHeight * camera.aspect;
       // 整根樹枝約佔畫面寬度的 22%（直式畫面改用高度為準，免得太細小）
-      const scale = Math.max(halfWidth * 0.6, halfHeight * 0.36);
+      const scale = Math.max(halfWidth * 0.6, halfHeight * 0.5);
       branch.scale.setScalar(scale);
       branch.position.set(halfWidth * 1.0, halfHeight * 0.92, -DISTANCE);
       branch.rotation.set(0, 0, -0.12);

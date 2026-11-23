@@ -26,6 +26,9 @@ void RE_Direct_Leaf( const in IncidentLight directLight, const in vec3 geometryP
   #endif
   reflectedLight.directDiffuse += transmitted * BRDF_Lambert( through )
     * backLit * uLeafTransmit * ( 1.0 + uLeafForward * towardLight );
+  // 側面朝鏡頭（幾乎平行光線）的葉子 backLit 接近 0，會變成黑色細刺；
+  // 朝太陽看時給一點與朝向無關的前向散射
+  reflectedLight.directDiffuse += transmitted * BRDF_Lambert( through ) * uLeafTransmit * towardLight * 0.35;
 }
 #undef RE_Direct
 #define RE_Direct RE_Direct_Leaf

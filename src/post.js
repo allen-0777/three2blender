@@ -154,11 +154,13 @@ const VOLUME_FRAGMENT = /* glsl */ `
   }
   // 沿太陽方向不變的圖樣：把點沿光線投到樹冠高度的平面上取雜訊。
   // 同一條光線上的值都一樣，所以亮暗會沿著光的方向拉成一條條光束（像光穿過遠處的葉縫）
-  float beamPattern( vec3 p ) {
+  float beamPattern( vec3 p, float t ) {
     vec2 q = p.xz + uSunDir.xz * ( ( 6.0 - p.y ) / uSunDir.y );
     float n = beamNoise( q * 0.55 ) * 0.65 + beamNoise( q * 1.4 + 3.1 ) * 0.35;
     // 只在樹冠高度以下拉成光束；樹梢以上的開闊天空不做條紋（低角度的太陽會把它拉成橫紋）
-    return mix( 0.08 + 2.0 * smoothstep( 0.45, 0.76, n ), 0.5, smoothstep( 4.5, 8.0, p.y ) );
+    // 遠處（> 15 m）的條紋淡掉：低角度看出去會疊成橫向的色帶
+    float fade = max( smoothstep( 4.5, 8.0, p.y ), smoothstep( 15.0, 38.0, t ) );
+    return mix( 0.08 + 2.0 * smoothstep( 0.45, 0.76, n ), 0.6, fade );
   }
   void main() {
     float z = texture2D( tDepth, vUv ).x;
@@ -181,7 +183,7 @@ const VOLUME_FRAGMENT = /* glsl */ `
         visible = texture( tShadow, vec3( s.xy, s.z - 0.0015 ) );
       }
       // 低處空氣較濃（地面的薄霧），往上變稀
-      float density = exp( - 0.22 * max( p.y, 0.0 ) ) * beamPattern( p );
+      float density = exp( - 0.22 * max( p.y, 0.0 ) ) * beamPattern( p, t );
       lit += visible * density * exp( - 0.018 * t );
     }
     float mu = dot( dir, uSunDir );
@@ -224,6 +226,7 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
   uniform sampler2D tGlow1;
   uniform sampler2D tGlow2;
   uniform sampler2D tRays;
+  uniform vec2 uRaysTexel;
   uniform sampler2D tForeground;
   uniform float uForeground;
   uniform float uGlow;
@@ -236,7 +239,7 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
     // 壓住極少數過亮的像素（太陽邊緣的葉緣），避免閃爍的白點
     vec3 color = min(texture2D(tColor, vUv).rgb, vec3(40.0));
 
-    #ifdef USE_DOF
+    #if defined(USE_DOF) || defined(USE_RAYS)
       float depth = linearDepth(vUv);
     #endif
 
@@ -252,14 +255,32 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
     #endif
 
     #ifdef USE_RAYS
-      // 體積光柱已經只積分到表面為止，直接疊加
-      color += texture2D(tRays, vUv).rgb * uRays;
+      // 體積光柱已經只積分到表面為止，直接疊加。
+      // 1/4 解析度的結果用深度感知的 4-tap 放大（alpha 存線性深度），樹幹邊緣不會出現方塊
+      {
+        vec2 raysPos = vUv / uRaysTexel - 0.5;
+        vec2 base = floor(raysPos);
+        vec2 f = raysPos - base;
+        vec3 sum = vec3(0.0);
+        float total = 0.0;
+        for (int k = 0; k < 4; k++) {
+          vec2 o = vec2(float(k - (k / 2) * 2), float(k / 2));
+          vec4 tap = texture2D(tRays, (base + o + 0.5) * uRaysTexel);
+          float bilinear = mix(1.0 - f.x, f.x, o.x) * mix(1.0 - f.y, f.y, o.y);
+          float w = (bilinear + 0.02) / (0.02 + abs(tap.a - depth) / max(depth, 0.1));
+          sum += tap.rgb * w;
+          total += w;
+        }
+        color += sum / max(total, 1e-4) * uRays;
+      }
     #endif
 
     // 前景層（已預先模糊、預乘 alpha 的樹枝剪影），疊在最上面
     if (uForeground > 0.5) {
       vec4 fg = texture2D(tForeground, vUv);
-      color = color * (1.0 - fg.a) + fg.rgb;
+      // 模糊會把細枝的覆蓋率攤薄成半透明；提高一點覆蓋率，剪影才有分量
+      float fgAlpha = min(fg.a * 1.6, 1.0);
+      color = color * (1.0 - fgAlpha) + fg.rgb * (fgAlpha / max(fg.a, 1e-4));
     }
 
     // 調色：以 18% 灰為中心拉開對比（暗部更深、亮部更透），再讓暗部略偏冷、亮部偏暖
@@ -387,6 +408,7 @@ export function createPost(renderer, { sunDirection }) {
       tGlow2: { value: glow[2].a.texture },
       // 模糊後的光柱最後落在 raysTemp（見 renderVolume）
       tRays: { value: raysTemp.texture },
+      uRaysTexel: { value: new THREE.Vector2(1, 1) },
       tForeground: { value: null },
       uForeground: { value: 0 },
       uGlow: { value: look.glow },
@@ -438,6 +460,7 @@ export function createPost(renderer, { sunDirection }) {
     const raysDivisor = 4;
     raysTarget.setSize(even((width / raysDivisor) * aux), even((height / raysDivisor) * aux));
     raysTemp.setSize(raysTarget.width, raysTarget.height);
+    compositeMaterial.uniforms.uRaysTexel.value.set(1 / raysTarget.width, 1 / raysTarget.height);
     foregroundTarget.setSize(even(width / 4), even(height / 4));
     foregroundTemp.setSize(foregroundTarget.width, foregroundTarget.height);
 
