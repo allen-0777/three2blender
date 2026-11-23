@@ -1,0 +1,2847 @@
+{
+  "errors": [],
+  "results": [
+    {
+      "mobile": false,
+      "target": 2,
+      "duration": 3241,
+      "samples": [
+        {
+          "ms": 12,
+          "opacity": 0,
+          "scene": 1
+        },
+        {
+          "ms": 29,
+          "opacity": 0,
+          "scene": 1
+        },
+        {
+          "ms": 45,
+          "opacity": 0.0123731,
+          "scene": 1
+        },
+        {
+          "ms": 62,
+          "opacity": 0.0307027,
+          "scene": 1
+        },
+        {
+          "ms": 79,
+          "opacity": 0.0557273,
+          "scene": 1
+        },
+        {
+          "ms": 96,
+          "opacity": 0.0874414,
+          "scene": 1
+        },
+        {
+          "ms": 112,
+          "opacity": 0.126381,
+          "scene": 1
+        },
+        {
+          "ms": 129,
+          "opacity": 0.170977,
+          "scene": 1
+        },
+        {
+          "ms": 147,
+          "opacity": 0.220443,
+          "scene": 1
+        },
+        {
+          "ms": 173,
+          "opacity": 0.273774,
+          "scene": 1
+        },
+        {
+          "ms": 189,
+          "opacity": 0.327883,
+          "scene": 1
+        },
+        {
+          "ms": 206,
+          "opacity": 0.381747,
+          "scene": 1
+        },
+        {
+          "ms": 214,
+          "opacity": 0.434392,
+          "scene": 1
+        },
+        {
+          "ms": 229,
+          "opacity": 0.484608,
+          "scene": 1
+        },
+        {
+          "ms": 246,
+          "opacity": 0.53189,
+          "scene": 1
+        },
+        {
+          "ms": 263,
+          "opacity": 0.575757,
+          "scene": 1
+        },
+        {
+          "ms": 279,
+          "opacity": 0.616702,
+          "scene": 1
+        },
+        {
+          "ms": 296,
+          "opacity": 0.654531,
+          "scene": 1
+        },
+        {
+          "ms": 313,
+          "opacity": 0.689188,
+          "scene": 1
+        },
+        {
+          "ms": 329,
+          "opacity": 0.721263,
+          "scene": 1
+        },
+        {
+          "ms": 346,
+          "opacity": 0.750725,
+          "scene": 1
+        },
+        {
+          "ms": 362,
+          "opacity": 0.777602,
+          "scene": 1
+        },
+        {
+          "ms": 380,
+          "opacity": 0.802392,
+          "scene": 1
+        },
+        {
+          "ms": 397,
+          "opacity": 0.825091,
+          "scene": 1
+        },
+        {
+          "ms": 413,
+          "opacity": 0.84585,
+          "scene": 1
+        },
+        {
+          "ms": 430,
+          "opacity": 0.8647,
+          "scene": 1
+        },
+        {
+          "ms": 446,
+          "opacity": 0.881993,
+          "scene": 1
+        },
+        {
+          "ms": 463,
+          "opacity": 0.897635,
+          "scene": 1
+        },
+        {
+          "ms": 479,
+          "opacity": 0.91192,
+          "scene": 1
+        },
+        {
+          "ms": 497,
+          "opacity": 0.924769,
+          "scene": 1
+        },
+        {
+          "ms": 513,
+          "opacity": 0.936424,
+          "scene": 1
+        },
+        {
+          "ms": 530,
+          "opacity": 0.946882,
+          "scene": 1
+        },
+        {
+          "ms": 547,
+          "opacity": 0.956215,
+          "scene": 1
+        },
+        {
+          "ms": 563,
+          "opacity": 0.964441,
+          "scene": 1
+        },
+        {
+          "ms": 581,
+          "opacity": 0.971679,
+          "scene": 1
+        },
+        {
+          "ms": 597,
+          "opacity": 0.978018,
+          "scene": 1
+        },
+        {
+          "ms": 614,
+          "opacity": 0.983492,
+          "scene": 1
+        },
+        {
+          "ms": 630,
+          "opacity": 0.988057,
+          "scene": 1
+        },
+        {
+          "ms": 647,
+          "opacity": 0.991826,
+          "scene": 1
+        },
+        {
+          "ms": 664,
+          "opacity": 0.994855,
+          "scene": 1
+        },
+        {
+          "ms": 680,
+          "opacity": 0.997153,
+          "scene": 1
+        },
+        {
+          "ms": 698,
+          "opacity": 0.998749,
+          "scene": 1
+        },
+        {
+          "ms": 713,
+          "opacity": 0.999692,
+          "scene": 1
+        },
+        {
+          "ms": 730,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 747,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2296,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2304,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2313,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2329,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2346,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2373,
+          "opacity": 0.990864,
+          "scene": 2
+        },
+        {
+          "ms": 2389,
+          "opacity": 0.978222,
+          "scene": 2
+        },
+        {
+          "ms": 2401,
+          "opacity": 0.961647,
+          "scene": 2
+        },
+        {
+          "ms": 2414,
+          "opacity": 0.941127,
+          "scene": 2
+        },
+        {
+          "ms": 2430,
+          "opacity": 0.916306,
+          "scene": 2
+        },
+        {
+          "ms": 2446,
+          "opacity": 0.887337,
+          "scene": 2
+        },
+        {
+          "ms": 2463,
+          "opacity": 0.854668,
+          "scene": 2
+        },
+        {
+          "ms": 2481,
+          "opacity": 0.81814,
+          "scene": 2
+        },
+        {
+          "ms": 2498,
+          "opacity": 0.779283,
+          "scene": 2
+        },
+        {
+          "ms": 2513,
+          "opacity": 0.738231,
+          "scene": 2
+        },
+        {
+          "ms": 2530,
+          "opacity": 0.696335,
+          "scene": 2
+        },
+        {
+          "ms": 2547,
+          "opacity": 0.654172,
+          "scene": 2
+        },
+        {
+          "ms": 2575,
+          "opacity": 0.612201,
+          "scene": 2
+        },
+        {
+          "ms": 2593,
+          "opacity": 0.571248,
+          "scene": 2
+        },
+        {
+          "ms": 2608,
+          "opacity": 0.531956,
+          "scene": 2
+        },
+        {
+          "ms": 2625,
+          "opacity": 0.494124,
+          "scene": 2
+        },
+        {
+          "ms": 2641,
+          "opacity": 0.458149,
+          "scene": 2
+        },
+        {
+          "ms": 2659,
+          "opacity": 0.424102,
+          "scene": 2
+        },
+        {
+          "ms": 2675,
+          "opacity": 0.39199,
+          "scene": 2
+        },
+        {
+          "ms": 2693,
+          "opacity": 0.361956,
+          "scene": 2
+        },
+        {
+          "ms": 2708,
+          "opacity": 0.333575,
+          "scene": 2
+        },
+        {
+          "ms": 2713,
+          "opacity": 0.307114,
+          "scene": 2
+        },
+        {
+          "ms": 2734,
+          "opacity": 0.282169,
+          "scene": 2
+        },
+        {
+          "ms": 2753,
+          "opacity": 0.258817,
+          "scene": 2
+        },
+        {
+          "ms": 2781,
+          "opacity": 0.216667,
+          "scene": 2
+        },
+        {
+          "ms": 2798,
+          "opacity": 0.197577,
+          "scene": 2
+        },
+        {
+          "ms": 2814,
+          "opacity": 0.179751,
+          "scene": 2
+        },
+        {
+          "ms": 2829,
+          "opacity": 0.163215,
+          "scene": 2
+        },
+        {
+          "ms": 2847,
+          "opacity": 0.147701,
+          "scene": 2
+        },
+        {
+          "ms": 2863,
+          "opacity": 0.133334,
+          "scene": 2
+        },
+        {
+          "ms": 2880,
+          "opacity": 0.119883,
+          "scene": 2
+        },
+        {
+          "ms": 2898,
+          "opacity": 0.107384,
+          "scene": 2
+        },
+        {
+          "ms": 2914,
+          "opacity": 0.095852,
+          "scene": 2
+        },
+        {
+          "ms": 2941,
+          "opacity": 0.085165,
+          "scene": 2
+        },
+        {
+          "ms": 2983,
+          "opacity": 0.057616,
+          "scene": 2
+        },
+        {
+          "ms": 3001,
+          "opacity": 0.0498791,
+          "scene": 2
+        },
+        {
+          "ms": 3031,
+          "opacity": 0.0428496,
+          "scene": 2
+        },
+        {
+          "ms": 3032,
+          "opacity": 0.0364128,
+          "scene": 2
+        },
+        {
+          "ms": 3046,
+          "opacity": 0.0306179,
+          "scene": 2
+        },
+        {
+          "ms": 3062,
+          "opacity": 0.0253689,
+          "scene": 2
+        },
+        {
+          "ms": 3091,
+          "opacity": 0.0206779,
+          "scene": 2
+        },
+        {
+          "ms": 3101,
+          "opacity": 0.016545,
+          "scene": 2
+        },
+        {
+          "ms": 3125,
+          "opacity": 0.0128989,
+          "scene": 2
+        },
+        {
+          "ms": 3134,
+          "opacity": 0.00974571,
+          "scene": 2
+        },
+        {
+          "ms": 3150,
+          "opacity": 0.00708099,
+          "scene": 2
+        },
+        {
+          "ms": 3170,
+          "opacity": 0.0048547,
+          "scene": 2
+        },
+        {
+          "ms": 3187,
+          "opacity": 0.00306733,
+          "scene": 2
+        },
+        {
+          "ms": 3205,
+          "opacity": 0.00170287,
+          "scene": 2
+        },
+        {
+          "ms": 3223,
+          "opacity": 0.000750765,
+          "scene": 2
+        },
+        {
+          "ms": 3241,
+          "opacity": 0.000185332,
+          "scene": 2
+        }
+      ]
+    },
+    {
+      "mobile": false,
+      "target": 1,
+      "duration": 2009,
+      "samples": [
+        {
+          "ms": 33,
+          "opacity": 0,
+          "scene": 2
+        },
+        {
+          "ms": 94,
+          "opacity": 0,
+          "scene": 2
+        },
+        {
+          "ms": 163,
+          "opacity": 0.0875007,
+          "scene": 2
+        },
+        {
+          "ms": 244,
+          "opacity": 0.327975,
+          "scene": 2
+        },
+        {
+          "ms": 334,
+          "opacity": 0.575828,
+          "scene": 2
+        },
+        {
+          "ms": 395,
+          "opacity": 0.72113,
+          "scene": 2
+        },
+        {
+          "ms": 463,
+          "opacity": 0.802432,
+          "scene": 2
+        },
+        {
+          "ms": 516,
+          "opacity": 0.881921,
+          "scene": 2
+        },
+        {
+          "ms": 593,
+          "opacity": 0.946899,
+          "scene": 2
+        },
+        {
+          "ms": 667,
+          "opacity": 0.978028,
+          "scene": 2
+        },
+        {
+          "ms": 739,
+          "opacity": 0.994859,
+          "scene": 2
+        },
+        {
+          "ms": 782,
+          "opacity": 0.999689,
+          "scene": 2
+        },
+        {
+          "ms": 842,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 924,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 967,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 1027,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 1099,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 1173,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 1208,
+          "opacity": 0.978154,
+          "scene": 1
+        },
+        {
+          "ms": 1273,
+          "opacity": 0.887377,
+          "scene": 1
+        },
+        {
+          "ms": 1312,
+          "opacity": 0.779336,
+          "scene": 1
+        },
+        {
+          "ms": 1375,
+          "opacity": 0.612256,
+          "scene": 1
+        },
+        {
+          "ms": 1429,
+          "opacity": 0.493951,
+          "scene": 1
+        },
+        {
+          "ms": 1456,
+          "opacity": 0.458195,
+          "scene": 1
+        },
+        {
+          "ms": 1509,
+          "opacity": 0.361994,
+          "scene": 1
+        },
+        {
+          "ms": 1549,
+          "opacity": 0.282201,
+          "scene": 1
+        },
+        {
+          "ms": 1576,
+          "opacity": 0.237,
+          "scene": 1
+        },
+        {
+          "ms": 1613,
+          "opacity": 0.197601,
+          "scene": 1
+        },
+        {
+          "ms": 1659,
+          "opacity": 0.147721,
+          "scene": 1
+        },
+        {
+          "ms": 1698,
+          "opacity": 0.1199,
+          "scene": 1
+        },
+        {
+          "ms": 1734,
+          "opacity": 0.0957998,
+          "scene": 1
+        },
+        {
+          "ms": 1771,
+          "opacity": 0.0751783,
+          "scene": 1
+        },
+        {
+          "ms": 1813,
+          "opacity": 0.0498888,
+          "scene": 1
+        },
+        {
+          "ms": 1844,
+          "opacity": 0.0364208,
+          "scene": 1
+        },
+        {
+          "ms": 1881,
+          "opacity": 0.0253457,
+          "scene": 1
+        },
+        {
+          "ms": 1900,
+          "opacity": 0.0206837,
+          "scene": 1
+        },
+        {
+          "ms": 1915,
+          "opacity": 0.0165501,
+          "scene": 1
+        },
+        {
+          "ms": 1932,
+          "opacity": 0.0129034,
+          "scene": 1
+        },
+        {
+          "ms": 1947,
+          "opacity": 0.00974955,
+          "scene": 1
+        },
+        {
+          "ms": 1962,
+          "opacity": 0.00706954,
+          "scene": 1
+        },
+        {
+          "ms": 1977,
+          "opacity": 0.00485734,
+          "scene": 1
+        },
+        {
+          "ms": 1992,
+          "opacity": 0.00305998,
+          "scene": 1
+        },
+        {
+          "ms": 2009,
+          "opacity": 0.00171134,
+          "scene": 1
+        }
+      ]
+    },
+    {
+      "mobile": false,
+      "target": 2,
+      "duration": 1714,
+      "samples": [
+        {
+          "ms": 3,
+          "opacity": 0.00074722,
+          "scene": 1
+        },
+        {
+          "ms": 21,
+          "opacity": 0.0130382,
+          "scene": 1
+        },
+        {
+          "ms": 37,
+          "opacity": 0.03134,
+          "scene": 1
+        },
+        {
+          "ms": 54,
+          "opacity": 0.0563398,
+          "scene": 1
+        },
+        {
+          "ms": 72,
+          "opacity": 0.0882456,
+          "scene": 1
+        },
+        {
+          "ms": 87,
+          "opacity": 0.126959,
+          "scene": 1
+        },
+        {
+          "ms": 105,
+          "opacity": 0.171832,
+          "scene": 1
+        },
+        {
+          "ms": 121,
+          "opacity": 0.22132,
+          "scene": 1
+        },
+        {
+          "ms": 137,
+          "opacity": 0.274342,
+          "scene": 1
+        },
+        {
+          "ms": 154,
+          "opacity": 0.328451,
+          "scene": 1
+        },
+        {
+          "ms": 171,
+          "opacity": 0.382313,
+          "scene": 1
+        },
+        {
+          "ms": 188,
+          "opacity": 0.435262,
+          "scene": 1
+        },
+        {
+          "ms": 204,
+          "opacity": 0.485453,
+          "scene": 1
+        },
+        {
+          "ms": 221,
+          "opacity": 0.532157,
+          "scene": 1
+        },
+        {
+          "ms": 238,
+          "opacity": 0.576538,
+          "scene": 1
+        },
+        {
+          "ms": 254,
+          "opacity": 0.617448,
+          "scene": 1
+        },
+        {
+          "ms": 271,
+          "opacity": 0.655023,
+          "scene": 1
+        },
+        {
+          "ms": 287,
+          "opacity": 0.68966,
+          "scene": 1
+        },
+        {
+          "ms": 304,
+          "opacity": 0.721714,
+          "scene": 1
+        },
+        {
+          "ms": 321,
+          "opacity": 0.751155,
+          "scene": 1
+        },
+        {
+          "ms": 337,
+          "opacity": 0.778011,
+          "scene": 1
+        },
+        {
+          "ms": 354,
+          "opacity": 0.802922,
+          "scene": 1
+        },
+        {
+          "ms": 370,
+          "opacity": 0.825458,
+          "scene": 1
+        },
+        {
+          "ms": 388,
+          "opacity": 0.846196,
+          "scene": 1
+        },
+        {
+          "ms": 405,
+          "opacity": 0.865133,
+          "scene": 1
+        },
+        {
+          "ms": 422,
+          "opacity": 0.882199,
+          "scene": 1
+        },
+        {
+          "ms": 438,
+          "opacity": 0.897919,
+          "scene": 1
+        },
+        {
+          "ms": 454,
+          "opacity": 0.912184,
+          "scene": 1
+        },
+        {
+          "ms": 471,
+          "opacity": 0.925087,
+          "scene": 1
+        },
+        {
+          "ms": 489,
+          "opacity": 0.936716,
+          "scene": 1
+        },
+        {
+          "ms": 504,
+          "opacity": 0.947088,
+          "scene": 1
+        },
+        {
+          "ms": 521,
+          "opacity": 0.956402,
+          "scene": 1
+        },
+        {
+          "ms": 538,
+          "opacity": 0.964656,
+          "scene": 1
+        },
+        {
+          "ms": 554,
+          "opacity": 0.97187,
+          "scene": 1
+        },
+        {
+          "ms": 571,
+          "opacity": 0.978151,
+          "scene": 1
+        },
+        {
+          "ms": 588,
+          "opacity": 0.983607,
+          "scene": 1
+        },
+        {
+          "ms": 604,
+          "opacity": 0.988155,
+          "scene": 1
+        },
+        {
+          "ms": 621,
+          "opacity": 0.991907,
+          "scene": 1
+        },
+        {
+          "ms": 637,
+          "opacity": 0.994919,
+          "scene": 1
+        },
+        {
+          "ms": 655,
+          "opacity": 0.997201,
+          "scene": 1
+        },
+        {
+          "ms": 672,
+          "opacity": 0.998788,
+          "scene": 1
+        },
+        {
+          "ms": 688,
+          "opacity": 0.999711,
+          "scene": 1
+        },
+        {
+          "ms": 705,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 721,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 738,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 761,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 771,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 787,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 804,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 821,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 838,
+          "opacity": 0.990856,
+          "scene": 2
+        },
+        {
+          "ms": 855,
+          "opacity": 0.978212,
+          "scene": 2
+        },
+        {
+          "ms": 872,
+          "opacity": 0.961745,
+          "scene": 2
+        },
+        {
+          "ms": 889,
+          "opacity": 0.941111,
+          "scene": 2
+        },
+        {
+          "ms": 905,
+          "opacity": 0.916286,
+          "scene": 2
+        },
+        {
+          "ms": 922,
+          "opacity": 0.887314,
+          "scene": 2
+        },
+        {
+          "ms": 938,
+          "opacity": 0.854644,
+          "scene": 2
+        },
+        {
+          "ms": 956,
+          "opacity": 0.818339,
+          "scene": 2
+        },
+        {
+          "ms": 972,
+          "opacity": 0.779495,
+          "scene": 2
+        },
+        {
+          "ms": 989,
+          "opacity": 0.738451,
+          "scene": 2
+        },
+        {
+          "ms": 1005,
+          "opacity": 0.696305,
+          "scene": 2
+        },
+        {
+          "ms": 1022,
+          "opacity": 0.653888,
+          "scene": 2
+        },
+        {
+          "ms": 1039,
+          "opacity": 0.612171,
+          "scene": 2
+        },
+        {
+          "ms": 1055,
+          "opacity": 0.571219,
+          "scene": 2
+        },
+        {
+          "ms": 1072,
+          "opacity": 0.531696,
+          "scene": 2
+        },
+        {
+          "ms": 1089,
+          "opacity": 0.494097,
+          "scene": 2
+        },
+        {
+          "ms": 1105,
+          "opacity": 0.458333,
+          "scene": 2
+        },
+        {
+          "ms": 1122,
+          "opacity": 0.424078,
+          "scene": 2
+        },
+        {
+          "ms": 1139,
+          "opacity": 0.392155,
+          "scene": 2
+        },
+        {
+          "ms": 1155,
+          "opacity": 0.361935,
+          "scene": 2
+        },
+        {
+          "ms": 1172,
+          "opacity": 0.33372,
+          "scene": 2
+        },
+        {
+          "ms": 1188,
+          "opacity": 0.307095,
+          "scene": 2
+        },
+        {
+          "ms": 1206,
+          "opacity": 0.282151,
+          "scene": 2
+        },
+        {
+          "ms": 1220,
+          "opacity": 0.258801,
+          "scene": 2
+        },
+        {
+          "ms": 1238,
+          "opacity": 0.237083,
+          "scene": 2
+        },
+        {
+          "ms": 1270,
+          "opacity": 0.216653,
+          "scene": 2
+        },
+        {
+          "ms": 1293,
+          "opacity": 0.179842,
+          "scene": 2
+        },
+        {
+          "ms": 1320,
+          "opacity": 0.163203,
+          "scene": 2
+        },
+        {
+          "ms": 1342,
+          "opacity": 0.133324,
+          "scene": 2
+        },
+        {
+          "ms": 1366,
+          "opacity": 0.119874,
+          "scene": 2
+        },
+        {
+          "ms": 1390,
+          "opacity": 0.0957771,
+          "scene": 2
+        },
+        {
+          "ms": 1412,
+          "opacity": 0.0850957,
+          "scene": 2
+        },
+        {
+          "ms": 1438,
+          "opacity": 0.066046,
+          "scene": 2
+        },
+        {
+          "ms": 1459,
+          "opacity": 0.0576102,
+          "scene": 2
+        },
+        {
+          "ms": 1483,
+          "opacity": 0.0498737,
+          "scene": 2
+        },
+        {
+          "ms": 1505,
+          "opacity": 0.0364084,
+          "scene": 2
+        },
+        {
+          "ms": 1541,
+          "opacity": 0.0253654,
+          "scene": 2
+        },
+        {
+          "ms": 1598,
+          "opacity": 0.0128965,
+          "scene": 2
+        },
+        {
+          "ms": 1632,
+          "opacity": 0.00706456,
+          "scene": 2
+        },
+        {
+          "ms": 1662,
+          "opacity": 0.00307562,
+          "scene": 2
+        },
+        {
+          "ms": 1690,
+          "opacity": 0.000750219,
+          "scene": 2
+        },
+        {
+          "ms": 1714,
+          "opacity": 0.000185064,
+          "scene": 2
+        }
+      ]
+    },
+    {
+      "mobile": false,
+      "time": "dusk",
+      "box": {
+        "x": 1325,
+        "y": 75,
+        "width": 48,
+        "height": 44
+      }
+    },
+    {
+      "mobile": false,
+      "time": "night",
+      "box": {
+        "x": 1373,
+        "y": 75,
+        "width": 48,
+        "height": 44
+      }
+    },
+    {
+      "mobile": false,
+      "time": "afternoon",
+      "box": {
+        "x": 1277,
+        "y": 75,
+        "width": 48,
+        "height": 44
+      }
+    },
+    {
+      "mobile": true,
+      "target": 2,
+      "duration": 3561,
+      "samples": [
+        {
+          "ms": 19,
+          "opacity": 0,
+          "scene": 1
+        },
+        {
+          "ms": 46,
+          "opacity": 0,
+          "scene": 1
+        },
+        {
+          "ms": 76,
+          "opacity": 0.0122998,
+          "scene": 1
+        },
+        {
+          "ms": 105,
+          "opacity": 0.0557613,
+          "scene": 1
+        },
+        {
+          "ms": 123,
+          "opacity": 0.0876956,
+          "scene": 1
+        },
+        {
+          "ms": 163,
+          "opacity": 0.220505,
+          "scene": 1
+        },
+        {
+          "ms": 180,
+          "opacity": 0.273515,
+          "scene": 1
+        },
+        {
+          "ms": 206,
+          "opacity": 0.327949,
+          "scene": 1
+        },
+        {
+          "ms": 231,
+          "opacity": 0.434454,
+          "scene": 1
+        },
+        {
+          "ms": 254,
+          "opacity": 0.484374,
+          "scene": 1
+        },
+        {
+          "ms": 277,
+          "opacity": 0.531671,
+          "scene": 1
+        },
+        {
+          "ms": 311,
+          "opacity": 0.61675,
+          "scene": 1
+        },
+        {
+          "ms": 334,
+          "opacity": 0.689228,
+          "scene": 1
+        },
+        {
+          "ms": 357,
+          "opacity": 0.7213,
+          "scene": 1
+        },
+        {
+          "ms": 387,
+          "opacity": 0.777633,
+          "scene": 1
+        },
+        {
+          "ms": 409,
+          "opacity": 0.80242,
+          "scene": 1
+        },
+        {
+          "ms": 428,
+          "opacity": 0.845755,
+          "scene": 1
+        },
+        {
+          "ms": 448,
+          "opacity": 0.864721,
+          "scene": 1
+        },
+        {
+          "ms": 470,
+          "opacity": 0.882012,
+          "scene": 1
+        },
+        {
+          "ms": 488,
+          "opacity": 0.897653,
+          "scene": 1
+        },
+        {
+          "ms": 497,
+          "opacity": 0.911936,
+          "scene": 1
+        },
+        {
+          "ms": 521,
+          "opacity": 0.924784,
+          "scene": 1
+        },
+        {
+          "ms": 540,
+          "opacity": 0.936437,
+          "scene": 1
+        },
+        {
+          "ms": 559,
+          "opacity": 0.946894,
+          "scene": 1
+        },
+        {
+          "ms": 576,
+          "opacity": 0.956173,
+          "scene": 1
+        },
+        {
+          "ms": 593,
+          "opacity": 0.96445,
+          "scene": 1
+        },
+        {
+          "ms": 609,
+          "opacity": 0.971728,
+          "scene": 1
+        },
+        {
+          "ms": 619,
+          "opacity": 0.978025,
+          "scene": 1
+        },
+        {
+          "ms": 636,
+          "opacity": 0.983468,
+          "scene": 1
+        },
+        {
+          "ms": 651,
+          "opacity": 0.988062,
+          "scene": 1
+        },
+        {
+          "ms": 670,
+          "opacity": 0.99183,
+          "scene": 1
+        },
+        {
+          "ms": 683,
+          "opacity": 0.994858,
+          "scene": 1
+        },
+        {
+          "ms": 695,
+          "opacity": 0.997144,
+          "scene": 1
+        },
+        {
+          "ms": 710,
+          "opacity": 0.99875,
+          "scene": 1
+        },
+        {
+          "ms": 727,
+          "opacity": 0.999692,
+          "scene": 1
+        },
+        {
+          "ms": 744,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 762,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 778,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 794,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 811,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 1987,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2030,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2031,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2044,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2060,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2134,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 2619,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2623,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2627,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2644,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2661,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 2678,
+          "opacity": 0.990908,
+          "scene": 2
+        },
+        {
+          "ms": 2694,
+          "opacity": 0.978194,
+          "scene": 2
+        },
+        {
+          "ms": 2714,
+          "opacity": 0.961612,
+          "scene": 2
+        },
+        {
+          "ms": 2730,
+          "opacity": 0.941084,
+          "scene": 2
+        },
+        {
+          "ms": 2744,
+          "opacity": 0.916254,
+          "scene": 2
+        },
+        {
+          "ms": 2761,
+          "opacity": 0.887277,
+          "scene": 2
+        },
+        {
+          "ms": 2777,
+          "opacity": 0.854602,
+          "scene": 2
+        },
+        {
+          "ms": 2794,
+          "opacity": 0.818294,
+          "scene": 2
+        },
+        {
+          "ms": 2811,
+          "opacity": 0.779206,
+          "scene": 2
+        },
+        {
+          "ms": 2827,
+          "opacity": 0.738401,
+          "scene": 2
+        },
+        {
+          "ms": 2844,
+          "opacity": 0.696254,
+          "scene": 2
+        },
+        {
+          "ms": 2861,
+          "opacity": 0.654091,
+          "scene": 2
+        },
+        {
+          "ms": 2877,
+          "opacity": 0.612122,
+          "scene": 2
+        },
+        {
+          "ms": 2894,
+          "opacity": 0.57117,
+          "scene": 2
+        },
+        {
+          "ms": 2910,
+          "opacity": 0.53165,
+          "scene": 2
+        },
+        {
+          "ms": 2927,
+          "opacity": 0.494053,
+          "scene": 2
+        },
+        {
+          "ms": 2944,
+          "opacity": 0.458082,
+          "scene": 2
+        },
+        {
+          "ms": 2960,
+          "opacity": 0.424039,
+          "scene": 2
+        },
+        {
+          "ms": 2977,
+          "opacity": 0.392117,
+          "scene": 2
+        },
+        {
+          "ms": 2993,
+          "opacity": 0.361899,
+          "scene": 2
+        },
+        {
+          "ms": 3010,
+          "opacity": 0.333687,
+          "scene": 2
+        },
+        {
+          "ms": 3027,
+          "opacity": 0.307064,
+          "scene": 2
+        },
+        {
+          "ms": 3044,
+          "opacity": 0.282267,
+          "scene": 2
+        },
+        {
+          "ms": 3060,
+          "opacity": 0.258909,
+          "scene": 2
+        },
+        {
+          "ms": 3077,
+          "opacity": 0.237058,
+          "scene": 2
+        },
+        {
+          "ms": 3094,
+          "opacity": 0.216629,
+          "scene": 2
+        },
+        {
+          "ms": 3110,
+          "opacity": 0.197652,
+          "scene": 2
+        },
+        {
+          "ms": 3127,
+          "opacity": 0.179821,
+          "scene": 2
+        },
+        {
+          "ms": 3143,
+          "opacity": 0.16328,
+          "scene": 2
+        },
+        {
+          "ms": 3160,
+          "opacity": 0.147762,
+          "scene": 2
+        },
+        {
+          "ms": 3177,
+          "opacity": 0.133308,
+          "scene": 2
+        },
+        {
+          "ms": 3194,
+          "opacity": 0.119936,
+          "scene": 2
+        },
+        {
+          "ms": 3210,
+          "opacity": 0.107433,
+          "scene": 2
+        },
+        {
+          "ms": 3226,
+          "opacity": 0.0958306,
+          "scene": 2
+        },
+        {
+          "ms": 3244,
+          "opacity": 0.0850833,
+          "scene": 2
+        },
+        {
+          "ms": 3260,
+          "opacity": 0.0752046,
+          "scene": 2
+        },
+        {
+          "ms": 3277,
+          "opacity": 0.0660355,
+          "scene": 2
+        },
+        {
+          "ms": 3294,
+          "opacity": 0.0576489,
+          "scene": 2
+        },
+        {
+          "ms": 3311,
+          "opacity": 0.0498649,
+          "scene": 2
+        },
+        {
+          "ms": 3327,
+          "opacity": 0.0428366,
+          "scene": 2
+        },
+        {
+          "ms": 3344,
+          "opacity": 0.0364377,
+          "scene": 2
+        },
+        {
+          "ms": 3360,
+          "opacity": 0.0306073,
+          "scene": 2
+        },
+        {
+          "ms": 3377,
+          "opacity": 0.0253594,
+          "scene": 2
+        },
+        {
+          "ms": 3394,
+          "opacity": 0.0206694,
+          "scene": 2
+        },
+        {
+          "ms": 3410,
+          "opacity": 0.0165375,
+          "scene": 2
+        },
+        {
+          "ms": 3427,
+          "opacity": 0.0128924,
+          "scene": 2
+        },
+        {
+          "ms": 3444,
+          "opacity": 0.00975758,
+          "scene": 2
+        },
+        {
+          "ms": 3460,
+          "opacity": 0.00707629,
+          "scene": 2
+        },
+        {
+          "ms": 3477,
+          "opacity": 0.00485086,
+          "scene": 2
+        },
+        {
+          "ms": 3493,
+          "opacity": 0.00307374,
+          "scene": 2
+        },
+        {
+          "ms": 3511,
+          "opacity": 0.00170759,
+          "scene": 2
+        },
+        {
+          "ms": 3526,
+          "opacity": 0.000753863,
+          "scene": 2
+        },
+        {
+          "ms": 3544,
+          "opacity": 0.000184618,
+          "scene": 2
+        },
+        {
+          "ms": 3561,
+          "opacity": 1.64614e-9,
+          "scene": 2
+        }
+      ]
+    },
+    {
+      "mobile": true,
+      "target": 1,
+      "duration": 1721,
+      "samples": [
+        {
+          "ms": 5,
+          "opacity": 0,
+          "scene": 2
+        },
+        {
+          "ms": 21,
+          "opacity": 0,
+          "scene": 2
+        },
+        {
+          "ms": 38,
+          "opacity": 0.0123695,
+          "scene": 2
+        },
+        {
+          "ms": 56,
+          "opacity": 0.0306975,
+          "scene": 2
+        },
+        {
+          "ms": 72,
+          "opacity": 0.0557204,
+          "scene": 2
+        },
+        {
+          "ms": 89,
+          "opacity": 0.087433,
+          "scene": 2
+        },
+        {
+          "ms": 106,
+          "opacity": 0.126119,
+          "scene": 2
+        },
+        {
+          "ms": 122,
+          "opacity": 0.170966,
+          "scene": 2
+        },
+        {
+          "ms": 139,
+          "opacity": 0.22043,
+          "scene": 2
+        },
+        {
+          "ms": 156,
+          "opacity": 0.273438,
+          "scene": 2
+        },
+        {
+          "ms": 172,
+          "opacity": 0.32787,
+          "scene": 2
+        },
+        {
+          "ms": 188,
+          "opacity": 0.382056,
+          "scene": 2
+        },
+        {
+          "ms": 205,
+          "opacity": 0.434379,
+          "scene": 2
+        },
+        {
+          "ms": 222,
+          "opacity": 0.484597,
+          "scene": 2
+        },
+        {
+          "ms": 239,
+          "opacity": 0.531879,
+          "scene": 2
+        },
+        {
+          "ms": 255,
+          "opacity": 0.575747,
+          "scene": 2
+        },
+        {
+          "ms": 272,
+          "opacity": 0.616693,
+          "scene": 2
+        },
+        {
+          "ms": 289,
+          "opacity": 0.654523,
+          "scene": 2
+        },
+        {
+          "ms": 306,
+          "opacity": 0.68938,
+          "scene": 2
+        },
+        {
+          "ms": 322,
+          "opacity": 0.721256,
+          "scene": 2
+        },
+        {
+          "ms": 339,
+          "opacity": 0.750549,
+          "scene": 2
+        },
+        {
+          "ms": 356,
+          "opacity": 0.777595,
+          "scene": 2
+        },
+        {
+          "ms": 372,
+          "opacity": 0.802386,
+          "scene": 2
+        },
+        {
+          "ms": 388,
+          "opacity": 0.825086,
+          "scene": 2
+        },
+        {
+          "ms": 404,
+          "opacity": 0.845845,
+          "scene": 2
+        },
+        {
+          "ms": 422,
+          "opacity": 0.864695,
+          "scene": 2
+        },
+        {
+          "ms": 438,
+          "opacity": 0.88189,
+          "scene": 2
+        },
+        {
+          "ms": 455,
+          "opacity": 0.897631,
+          "scene": 2
+        },
+        {
+          "ms": 472,
+          "opacity": 0.911916,
+          "scene": 2
+        },
+        {
+          "ms": 488,
+          "opacity": 0.924766,
+          "scene": 2
+        },
+        {
+          "ms": 504,
+          "opacity": 0.936488,
+          "scene": 2
+        },
+        {
+          "ms": 521,
+          "opacity": 0.94688,
+          "scene": 2
+        },
+        {
+          "ms": 538,
+          "opacity": 0.956213,
+          "scene": 2
+        },
+        {
+          "ms": 555,
+          "opacity": 0.964439,
+          "scene": 2
+        },
+        {
+          "ms": 572,
+          "opacity": 0.971718,
+          "scene": 2
+        },
+        {
+          "ms": 588,
+          "opacity": 0.978016,
+          "scene": 2
+        },
+        {
+          "ms": 605,
+          "opacity": 0.983461,
+          "scene": 2
+        },
+        {
+          "ms": 622,
+          "opacity": 0.988056,
+          "scene": 2
+        },
+        {
+          "ms": 638,
+          "opacity": 0.991846,
+          "scene": 2
+        },
+        {
+          "ms": 655,
+          "opacity": 0.994854,
+          "scene": 2
+        },
+        {
+          "ms": 672,
+          "opacity": 0.997153,
+          "scene": 2
+        },
+        {
+          "ms": 688,
+          "opacity": 0.998756,
+          "scene": 2
+        },
+        {
+          "ms": 705,
+          "opacity": 0.999691,
+          "scene": 2
+        },
+        {
+          "ms": 722,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 738,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 755,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 772,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 788,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 805,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 821,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 837,
+          "opacity": 0.990927,
+          "scene": 1
+        },
+        {
+          "ms": 855,
+          "opacity": 0.978221,
+          "scene": 1
+        },
+        {
+          "ms": 871,
+          "opacity": 0.961645,
+          "scene": 1
+        },
+        {
+          "ms": 888,
+          "opacity": 0.941125,
+          "scene": 1
+        },
+        {
+          "ms": 904,
+          "opacity": 0.916302,
+          "scene": 1
+        },
+        {
+          "ms": 922,
+          "opacity": 0.887333,
+          "scene": 1
+        },
+        {
+          "ms": 938,
+          "opacity": 0.854457,
+          "scene": 1
+        },
+        {
+          "ms": 955,
+          "opacity": 0.818362,
+          "scene": 1
+        },
+        {
+          "ms": 972,
+          "opacity": 0.779278,
+          "scene": 1
+        },
+        {
+          "ms": 987,
+          "opacity": 0.738226,
+          "scene": 1
+        },
+        {
+          "ms": 1005,
+          "opacity": 0.69633,
+          "scene": 1
+        },
+        {
+          "ms": 1021,
+          "opacity": 0.653914,
+          "scene": 1
+        },
+        {
+          "ms": 1038,
+          "opacity": 0.611948,
+          "scene": 1
+        },
+        {
+          "ms": 1055,
+          "opacity": 0.571243,
+          "scene": 1
+        },
+        {
+          "ms": 1072,
+          "opacity": 0.531719,
+          "scene": 1
+        },
+        {
+          "ms": 1088,
+          "opacity": 0.494119,
+          "scene": 1
+        },
+        {
+          "ms": 1105,
+          "opacity": 0.458145,
+          "scene": 1
+        },
+        {
+          "ms": 1122,
+          "opacity": 0.424098,
+          "scene": 1
+        },
+        {
+          "ms": 1138,
+          "opacity": 0.391987,
+          "scene": 1
+        },
+        {
+          "ms": 1155,
+          "opacity": 0.361952,
+          "scene": 1
+        },
+        {
+          "ms": 1172,
+          "opacity": 0.333736,
+          "scene": 1
+        },
+        {
+          "ms": 1188,
+          "opacity": 0.306956,
+          "scene": 1
+        },
+        {
+          "ms": 1205,
+          "opacity": 0.282166,
+          "scene": 1
+        },
+        {
+          "ms": 1221,
+          "opacity": 0.258815,
+          "scene": 1
+        },
+        {
+          "ms": 1237,
+          "opacity": 0.237096,
+          "scene": 1
+        },
+        {
+          "ms": 1255,
+          "opacity": 0.216665,
+          "scene": 1
+        },
+        {
+          "ms": 1271,
+          "opacity": 0.197575,
+          "scene": 1
+        },
+        {
+          "ms": 1288,
+          "opacity": 0.179852,
+          "scene": 1
+        },
+        {
+          "ms": 1305,
+          "opacity": 0.163213,
+          "scene": 1
+        },
+        {
+          "ms": 1322,
+          "opacity": 0.147699,
+          "scene": 1
+        },
+        {
+          "ms": 1337,
+          "opacity": 0.133333,
+          "scene": 1
+        },
+        {
+          "ms": 1355,
+          "opacity": 0.119882,
+          "scene": 1
+        },
+        {
+          "ms": 1371,
+          "opacity": 0.107454,
+          "scene": 1
+        },
+        {
+          "ms": 1388,
+          "opacity": 0.0958507,
+          "scene": 1
+        },
+        {
+          "ms": 1405,
+          "opacity": 0.0851019,
+          "scene": 1
+        },
+        {
+          "ms": 1422,
+          "opacity": 0.0751646,
+          "scene": 1
+        },
+        {
+          "ms": 1439,
+          "opacity": 0.0659986,
+          "scene": 1
+        },
+        {
+          "ms": 1454,
+          "opacity": 0.057615,
+          "scene": 1
+        },
+        {
+          "ms": 1472,
+          "opacity": 0.0498782,
+          "scene": 1
+        },
+        {
+          "ms": 1488,
+          "opacity": 0.0428488,
+          "scene": 1
+        },
+        {
+          "ms": 1504,
+          "opacity": 0.036412,
+          "scene": 1
+        },
+        {
+          "ms": 1522,
+          "opacity": 0.0305841,
+          "scene": 1
+        },
+        {
+          "ms": 1538,
+          "opacity": 0.0253386,
+          "scene": 1
+        },
+        {
+          "ms": 1555,
+          "opacity": 0.0206774,
+          "scene": 1
+        },
+        {
+          "ms": 1572,
+          "opacity": 0.0165212,
+          "scene": 1
+        },
+        {
+          "ms": 1587,
+          "opacity": 0.0128985,
+          "scene": 1
+        },
+        {
+          "ms": 1605,
+          "opacity": 0.00974537,
+          "scene": 1
+        },
+        {
+          "ms": 1621,
+          "opacity": 0.00706603,
+          "scene": 1
+        },
+        {
+          "ms": 1638,
+          "opacity": 0.00485446,
+          "scene": 1
+        },
+        {
+          "ms": 1654,
+          "opacity": 0.00306714,
+          "scene": 1
+        },
+        {
+          "ms": 1671,
+          "opacity": 0.00170967,
+          "scene": 1
+        },
+        {
+          "ms": 1688,
+          "opacity": 0.000750674,
+          "scene": 1
+        },
+        {
+          "ms": 1705,
+          "opacity": 0.000185288,
+          "scene": 1
+        },
+        {
+          "ms": 1721,
+          "opacity": 4.2142e-9,
+          "scene": 1
+        }
+      ]
+    },
+    {
+      "mobile": true,
+      "target": 2,
+      "duration": 1722,
+      "samples": [
+        {
+          "ms": 5,
+          "opacity": 0,
+          "scene": 1
+        },
+        {
+          "ms": 21,
+          "opacity": 0,
+          "scene": 1
+        },
+        {
+          "ms": 38,
+          "opacity": 0.0124025,
+          "scene": 1
+        },
+        {
+          "ms": 54,
+          "opacity": 0.0307442,
+          "scene": 1
+        },
+        {
+          "ms": 71,
+          "opacity": 0.0557818,
+          "scene": 1
+        },
+        {
+          "ms": 88,
+          "opacity": 0.0875092,
+          "scene": 1
+        },
+        {
+          "ms": 105,
+          "opacity": 0.12621,
+          "scene": 1
+        },
+        {
+          "ms": 121,
+          "opacity": 0.171068,
+          "scene": 1
+        },
+        {
+          "ms": 138,
+          "opacity": 0.220542,
+          "scene": 1
+        },
+        {
+          "ms": 155,
+          "opacity": 0.273554,
+          "scene": 1
+        },
+        {
+          "ms": 172,
+          "opacity": 0.327988,
+          "scene": 1
+        },
+        {
+          "ms": 188,
+          "opacity": 0.38185,
+          "scene": 1
+        },
+        {
+          "ms": 205,
+          "opacity": 0.434491,
+          "scene": 1
+        },
+        {
+          "ms": 221,
+          "opacity": 0.484702,
+          "scene": 1
+        },
+        {
+          "ms": 238,
+          "opacity": 0.531704,
+          "scene": 1
+        },
+        {
+          "ms": 255,
+          "opacity": 0.575839,
+          "scene": 1
+        },
+        {
+          "ms": 272,
+          "opacity": 0.616778,
+          "scene": 1
+        },
+        {
+          "ms": 288,
+          "opacity": 0.654384,
+          "scene": 1
+        },
+        {
+          "ms": 305,
+          "opacity": 0.689252,
+          "scene": 1
+        },
+        {
+          "ms": 322,
+          "opacity": 0.721322,
+          "scene": 1
+        },
+        {
+          "ms": 338,
+          "opacity": 0.75061,
+          "scene": 1
+        },
+        {
+          "ms": 355,
+          "opacity": 0.777651,
+          "scene": 1
+        },
+        {
+          "ms": 371,
+          "opacity": 0.802437,
+          "scene": 1
+        },
+        {
+          "ms": 388,
+          "opacity": 0.825133,
+          "scene": 1
+        },
+        {
+          "ms": 405,
+          "opacity": 0.845769,
+          "scene": 1
+        },
+        {
+          "ms": 422,
+          "opacity": 0.864734,
+          "scene": 1
+        },
+        {
+          "ms": 438,
+          "opacity": 0.881925,
+          "scene": 1
+        },
+        {
+          "ms": 454,
+          "opacity": 0.897664,
+          "scene": 1
+        },
+        {
+          "ms": 472,
+          "opacity": 0.911946,
+          "scene": 1
+        },
+        {
+          "ms": 488,
+          "opacity": 0.924866,
+          "scene": 1
+        },
+        {
+          "ms": 505,
+          "opacity": 0.936445,
+          "scene": 1
+        },
+        {
+          "ms": 522,
+          "opacity": 0.946901,
+          "scene": 1
+        },
+        {
+          "ms": 538,
+          "opacity": 0.956179,
+          "scene": 1
+        },
+        {
+          "ms": 555,
+          "opacity": 0.964456,
+          "scene": 1
+        },
+        {
+          "ms": 572,
+          "opacity": 0.971692,
+          "scene": 1
+        },
+        {
+          "ms": 589,
+          "opacity": 0.978029,
+          "scene": 1
+        },
+        {
+          "ms": 605,
+          "opacity": 0.983471,
+          "scene": 1
+        },
+        {
+          "ms": 622,
+          "opacity": 0.988065,
+          "scene": 1
+        },
+        {
+          "ms": 638,
+          "opacity": 0.991833,
+          "scene": 1
+        },
+        {
+          "ms": 655,
+          "opacity": 0.99486,
+          "scene": 1
+        },
+        {
+          "ms": 672,
+          "opacity": 0.997157,
+          "scene": 1
+        },
+        {
+          "ms": 688,
+          "opacity": 0.998751,
+          "scene": 1
+        },
+        {
+          "ms": 706,
+          "opacity": 0.999689,
+          "scene": 1
+        },
+        {
+          "ms": 722,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 738,
+          "opacity": 1,
+          "scene": 1
+        },
+        {
+          "ms": 756,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 771,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 788,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 805,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 823,
+          "opacity": 1,
+          "scene": 2
+        },
+        {
+          "ms": 838,
+          "opacity": 0.990904,
+          "scene": 2
+        },
+        {
+          "ms": 855,
+          "opacity": 0.978189,
+          "scene": 2
+        },
+        {
+          "ms": 873,
+          "opacity": 0.961605,
+          "scene": 2
+        },
+        {
+          "ms": 889,
+          "opacity": 0.941076,
+          "scene": 2
+        },
+        {
+          "ms": 906,
+          "opacity": 0.916244,
+          "scene": 2
+        },
+        {
+          "ms": 921,
+          "opacity": 0.887452,
+          "scene": 2
+        },
+        {
+          "ms": 939,
+          "opacity": 0.854382,
+          "scene": 2
+        },
+        {
+          "ms": 955,
+          "opacity": 0.818507,
+          "scene": 2
+        },
+        {
+          "ms": 971,
+          "opacity": 0.779191,
+          "scene": 2
+        },
+        {
+          "ms": 989,
+          "opacity": 0.738386,
+          "scene": 2
+        },
+        {
+          "ms": 1005,
+          "opacity": 0.696493,
+          "scene": 2
+        },
+        {
+          "ms": 1022,
+          "opacity": 0.654076,
+          "scene": 2
+        },
+        {
+          "ms": 1039,
+          "opacity": 0.612107,
+          "scene": 2
+        },
+        {
+          "ms": 1055,
+          "opacity": 0.571397,
+          "scene": 2
+        },
+        {
+          "ms": 1072,
+          "opacity": 0.531636,
+          "scene": 2
+        },
+        {
+          "ms": 1088,
+          "opacity": 0.49404,
+          "scene": 2
+        },
+        {
+          "ms": 1105,
+          "opacity": 0.458069,
+          "scene": 2
+        },
+        {
+          "ms": 1122,
+          "opacity": 0.424225,
+          "scene": 2
+        },
+        {
+          "ms": 1138,
+          "opacity": 0.392106,
+          "scene": 2
+        },
+        {
+          "ms": 1155,
+          "opacity": 0.361889,
+          "scene": 2
+        },
+        {
+          "ms": 1171,
+          "opacity": 0.333677,
+          "scene": 2
+        },
+        {
+          "ms": 1188,
+          "opacity": 0.307055,
+          "scene": 2
+        },
+        {
+          "ms": 1205,
+          "opacity": 0.282258,
+          "scene": 2
+        },
+        {
+          "ms": 1222,
+          "opacity": 0.258766,
+          "scene": 2
+        },
+        {
+          "ms": 1238,
+          "opacity": 0.237051,
+          "scene": 2
+        },
+        {
+          "ms": 1255,
+          "opacity": 0.21674,
+          "scene": 2
+        },
+        {
+          "ms": 1272,
+          "opacity": 0.197645,
+          "scene": 2
+        },
+        {
+          "ms": 1288,
+          "opacity": 0.179815,
+          "scene": 2
+        },
+        {
+          "ms": 1304,
+          "opacity": 0.163178,
+          "scene": 2
+        },
+        {
+          "ms": 1322,
+          "opacity": 0.147757,
+          "scene": 2
+        },
+        {
+          "ms": 1339,
+          "opacity": 0.133386,
+          "scene": 2
+        },
+        {
+          "ms": 1355,
+          "opacity": 0.119931,
+          "scene": 2
+        },
+        {
+          "ms": 1372,
+          "opacity": 0.107428,
+          "scene": 2
+        },
+        {
+          "ms": 1389,
+          "opacity": 0.0958266,
+          "scene": 2
+        },
+        {
+          "ms": 1405,
+          "opacity": 0.0850796,
+          "scene": 2
+        },
+        {
+          "ms": 1422,
+          "opacity": 0.0752011,
+          "scene": 2
+        },
+        {
+          "ms": 1438,
+          "opacity": 0.0660323,
+          "scene": 2
+        },
+        {
+          "ms": 1455,
+          "opacity": 0.0575976,
+          "scene": 2
+        },
+        {
+          "ms": 1472,
+          "opacity": 0.0499065,
+          "scene": 2
+        },
+        {
+          "ms": 1488,
+          "opacity": 0.0428342,
+          "scene": 2
+        },
+        {
+          "ms": 1505,
+          "opacity": 0.0364355,
+          "scene": 2
+        },
+        {
+          "ms": 1522,
+          "opacity": 0.0306053,
+          "scene": 2
+        },
+        {
+          "ms": 1539,
+          "opacity": 0.0253576,
+          "scene": 2
+        },
+        {
+          "ms": 1555,
+          "opacity": 0.0206943,
+          "scene": 2
+        },
+        {
+          "ms": 1572,
+          "opacity": 0.0165361,
+          "scene": 2
+        },
+        {
+          "ms": 1588,
+          "opacity": 0.0128912,
+          "scene": 2
+        },
+        {
+          "ms": 1605,
+          "opacity": 0.00973909,
+          "scene": 2
+        },
+        {
+          "ms": 1622,
+          "opacity": 0.00707541,
+          "scene": 2
+        },
+        {
+          "ms": 1639,
+          "opacity": 0.00485014,
+          "scene": 2
+        },
+        {
+          "ms": 1655,
+          "opacity": 0.00306375,
+          "scene": 2
+        },
+        {
+          "ms": 1672,
+          "opacity": 0.00170717,
+          "scene": 2
+        },
+        {
+          "ms": 1690,
+          "opacity": 0.000749037,
+          "scene": 2
+        },
+        {
+          "ms": 1705,
+          "opacity": 0.00018672,
+          "scene": 2
+        },
+        {
+          "ms": 1722,
+          "opacity": 1.27477e-9,
+          "scene": 2
+        }
+      ]
+    },
+    {
+      "mobile": true,
+      "time": "dusk",
+      "box": {
+        "x": 281,
+        "y": 69,
+        "width": 48,
+        "height": 44
+      }
+    },
+    {
+      "mobile": true,
+      "time": "night",
+      "box": {
+        "x": 329,
+        "y": 69,
+        "width": 48,
+        "height": 44
+      }
+    },
+    {
+      "mobile": true,
+      "time": "afternoon",
+      "box": {
+        "x": 233,
+        "y": 69,
+        "width": 48,
+        "height": 44
+      }
+    }
+  ]
+}
