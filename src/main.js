@@ -383,7 +383,8 @@ renderer.setAnimationLoop((now) => {
   const targetX = CAMERA_BASE.x + pointer.x * 0.9 + drift + dollySway;
   const targetY = CAMERA_BASE.y + pointer.y * 0.35 + (activeIndex === 2 ? Math.sin(dollyClock * 0.37) * 0.04 : 0);
   const targetZ = CAMERA_BASE.z - dolly * DOLLY_DISTANCE;
-  const ease = 1 - Math.exp(-dt * 2.5);
+  // 場景二開著卡片或表單時鏡頭完全停在原地（推軌本來就很慢，直接停住看不出頓挫）
+  const ease = activeIndex === 2 && (formDialog.open || cardDialog.open) ? 0 : 1 - Math.exp(-dt * 2.5);
   camera.position.x += (targetX - camera.position.x) * ease;
   camera.position.y += (targetY - camera.position.y) * ease;
   camera.position.z += (targetZ - camera.position.z) * ease;

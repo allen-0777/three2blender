@@ -28,7 +28,7 @@ export const TIMES = {
     look: { contrast: 1.24, glow: 0.2, threshold: 1.8, vignette: 0.42 },
     lanterns: 0,
     wishGlow: 1,
-    water: { body: [0.03, 0.028, 0.02], fallback: [0.45, 0.55, 0.72], glitter: 1 },
+    water: { body: [0.03, 0.028, 0.02], fallback: [0.2, 0.07, 0.035], glitter: 1 },
     background: 0xf3c08a,
   },
   // B：黃昏。太陽剛落到神木樹幹左邊的地平線上，天空上紫下橘，石燈籠點亮
@@ -48,7 +48,7 @@ export const TIMES = {
     look: { contrast: 1.24, glow: 0.24, threshold: 1.6, vignette: 0.46 },
     lanterns: 0.75,
     wishGlow: 1.15,
-    water: { body: [0.025, 0.018, 0.02], fallback: [0.6, 0.3, 0.3], glitter: 1.2 },
+    water: { body: [0.025, 0.018, 0.02], fallback: [0.16, 0.05, 0.04], glitter: 1.2 },
     background: 0x8a4a4a,
   },
   // C：夜晚。深藍的天、右上角一輪明月，冷色月光；石燈籠的暖光與發光的許願葉是畫面主角
@@ -68,7 +68,7 @@ export const TIMES = {
     look: { contrast: 1.15, glow: 0.3, threshold: 1.3, vignette: 0.5 },
     lanterns: 1.6,
     wishGlow: 1.45,
-    water: { body: [0.006, 0.008, 0.014], fallback: [0.05, 0.08, 0.16], glitter: 0.8 },
+    water: { body: [0.006, 0.008, 0.014], fallback: [0.012, 0.014, 0.03], glitter: 0.8 },
     background: 0x0b1020,
   },
 };

@@ -74,11 +74,15 @@ export function createSceneSwitch({ root, fade, initial, load, activate, setTime
     }
   }
 
+  /** 一次只做一個切換；連點時依序排隊 */
   function run(task) {
-    const next = (busy ?? Promise.resolve()).then(task, task);
-    busy = next.finally(() => {
-      if (busy === next) busy = null;
-    });
+    const next = (busy ?? Promise.resolve()).then(() => task());
+    const tracked = next
+      .catch((error) => console.error('場景切換失敗', error))
+      .finally(() => {
+        if (busy === tracked) busy = null;
+      });
+    busy = tracked;
     return next;
   }
 

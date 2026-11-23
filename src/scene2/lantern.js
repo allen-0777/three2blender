@@ -176,7 +176,7 @@ export function createLanterns() {
     /** 0 = 白天不亮；黃昏約 1；夜晚約 1.6 */
     setLevel(next) {
       level = next;
-      windowMaterial.uniforms.uLevel.value = next * 2.6;
+      windowMaterial.uniforms.uLevel.value = next * 1.6;
       haloMaterial.opacity = Math.min(next, 1.6) * 0.5;
       halos.visible = next > 0;
       lanternUniforms.uLanterns.value.forEach((v) => {

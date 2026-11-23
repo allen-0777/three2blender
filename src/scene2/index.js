@@ -120,7 +120,7 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   // ---- 樹 ----
   const giant = createGiantTree({ barkNormals: quality.barkNormals, leafBudget: quality.giantLeaves });
   scene.add(giant.group);
-  scene.add(createPines(trees.filter((t) => t.species === 'pine')));
+  scene.add(createPines(trees.filter((t) => t.species === 'pine'), createFoliageMaterial({ sunWorld: sceneTwoSun, transmit: 0.5, forward: 1.2, layers: 0.03 })));
   const [mapleVariants, ginkgoVariants, greenVariants] = await Promise.all([
     loadVariants(),
     loadVariants({ pickHue: weighted(GINKGO_HUES), seed: 3000 }),
@@ -236,6 +236,7 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
     sun,
     sunDirection,
     giant,
+    water,
     setTime,
     applyAtmosphere,
     get time() {

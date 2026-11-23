@@ -70,7 +70,8 @@ const FRAGMENT = /* glsl */ `
       // 波紋越碎反射越糊：用 mip bias 模擬
       reflected = texture( tEnv, R, 2.2 ).rgb;
     } else {
-      reflected = mix( mapleHaze( normalize( vec3( R.x, R.y * 0.3, R.z ) ) ), uSkyFallback, smoothstep( 0.05, 0.6, R.y ) );
+      // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
+      reflected = mix( uSkyFallback, mapleHaze( normalize( vec3( R.x, max( R.y, 0.02 ), R.z ) ) ), smoothstep( 0.3, 0.85, R.y ) );
     }
     float fresnel = 0.02 + 0.98 * pow( 1.0 - max( dot( N, V ), 0.0 ), 5.0 );
     fresnel = mix( 0.2, 0.92, fresnel );
