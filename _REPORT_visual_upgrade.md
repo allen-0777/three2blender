@@ -98,3 +98,62 @@ Poly Haven，CC0：Forest Leaves 02、Bark Brown 02（作者 Rob Tuytel）。明
 - 貼圖是原始 JPG，沒有轉 WebP／KTX2。
 - 飄落葉最近離鏡頭 2.5 m，偶爾會有一片很大的葉子飄過畫面上緣（見 `04` 截圖）。
 - `_claude_visual.log` 是原本就在的空檔案，沒有 commit。
+
+---
+
+# 修正 1（2026-11-23）：樹冠「紅燈籠」與許願葉描邊
+
+Commit `63e13fd`。只動前端：`src/trees.js`、`src/wishLeaves.js`、`src/leaves.js`（多匯出輪廓座標）、`_qa/visual/run-visual.mjs`（加 `QA_OUT`）。
+`server/`、API、GLB 模型、`blender/generate_trees.py` 都沒有動。
+
+## 1. 樹冠裡的紅燈籠
+
+- **原因**：GLB 樹冠每個葉叢中心有一顆 12 頂點的二十面體實心團塊（產生器用來擋葉片空隙），和葉片在同一個網格、同一個材質。
+  P0 加的透光把每個面都當成薄葉片：逆光時團塊朝鏡頭的那一面背對太陽，整面被算成「光穿過來」而發亮。
+  已驗證：只關掉團塊的透光，燈籠就變成暗色；問題不在模型的顏色。
+- **做法**：載入 GLB 時用連通元件找出這些團塊（固定 12 頂點／20 三角形，和 13 頂點／12 三角形的葉片不相連），從索引裡拿掉。
+  五個變體共拿掉 202 顆。試過「保留但不透光」和「縮到 60%」，近處的樹仍看得到深色的低面數球，所以選擇不畫。
+- **不需要重出 Blender 模型**，`public/models/maple_trees.glb` 原檔未改，因此沒有另存備份。
+  之後若重出模型，可以直接在 `generate_trees.py` 拿掉團塊；前端這段找不到團塊時不會做任何事。
+- 樹冠少了填充後，葉片之間偶爾看得到後面的枝幹或天空，目視仍是滿的。每個變體少畫 560–920 個三角形。
+
+## 2. 許願葉的發光
+
+- 拿掉原本「同輪廓放大 1.16 倍的白色實心描邊」。
+- 改成三層暖色、沒有硬邊的光（仍是 3 個 draw call，和原本一樣）：
+  1. **內部光**：葉身自發光不再是平塗，葉心最亮、往葉尖漸弱，葉脈是透光的細亮線（葉子很小時細線自動淡出）。
+  2. **邊緣光**：沿輪廓往外長一圈裙邊幾何，疊加混合、由葉緣往外淡出到 0（寬度約葉片的 19%）。
+  3. **光暈**：原本面向鏡頭的圓形柔光保留，顏色略偏暖、不透明度 0.22 → 0.20。
+- 和一般落葉的區別：比較大、葉脈發亮、有一圈暖光；一般落葉沒有自發光。low 檔（沒有 lens glow）與手機也分得出來，見 `after-desktop-low.png`、`after-mobile.png`。
+- **沒有動**：`pick()` 的點擊半徑、放樣、飄落、`focusDepth()`、`window.__wishWall` 的欄位。許願葉材質仍獨立於一般落葉。
+- 限制：許願葉疊在很亮的背景（太陽、遠處霧）前面時，疊加的邊緣光幾乎看不到，這時靠葉脈與顏色辨識。
+
+## 驗收
+
+- `npm test`：16/16 通過。
+- `_qa/run-qa.mjs`（許願牆回歸，截圖寫到暫存目錄）：27/27 通過。腳本列出的 HTTP 400 是它刻意送出含網址的留言。
+- `_qa/visual/run-visual.mjs`（`QA_OUT=_qa/visual/fix1`）：20/20 通過，頁面沒有 console error／warning。
+  hover 游標、點擊開卡片、觸控開卡片、換檔後的點擊熱區、拉焦與回焦都在裡面。
+- **效能**：同一台機器、同一時間交替量修改前（`0a3c733`）與修改後，各兩輪的平均幀時間：
+
+  | 檔次（1440×900 @2×，headless） | 修改前 | 修改後 |
+  | --- | --- | --- |
+  | high | 38.2／36.3 ms | 37.9／35.8 ms |
+  | mid | 22.8／22.2 ms | 23.0／22.2 ms |
+  | low | 18.7／19.5 ms | 18.9／19.0 ms |
+
+  沒有可量到的差異。這次機器整體比 P0 報告時慢（當時 high 是 23.3 ms），所以 `run-visual` 印出的 high 44.8 ms 不能和 P0 的表直接比。
+  手機模擬（low、CPU 4× 降速）16.6 ms，約 60 fps，和 P0 相同。仍然沒有實機手機數據。
+
+## 截圖（`_qa/visual/fix1/`）
+
+- 對照：`before-*` 與 `after-*` 各五張，`desktop-high`、`desktop-topleft`（左上樹冠 2× 裁切）、`desktop-wish-closeup`（許願葉 2× 裁切）、`desktop-low`、`mobile`。
+  先看 `before-desktop-topleft.png` 對 `after-desktop-topleft.png`，以及兩張 `desktop-wish-closeup`。
+- `01`–`09`：修改後重跑 `run-visual.mjs` 的整套截圖。`_qa/visual/` 原本的 P0 截圖沒有覆蓋。
+- `capture.mjs`：拍對照圖的腳本，不送留言。
+- 桌面全幅截圖同樣縮到 1440 px 寬。
+
+## 其他
+
+- 本機驗收用 JSON fallback 儲存（啟動時取消 `DATABASE_URL`），`data/wishes.json` 多了驗收腳本送出的 3 則留言（67 → 70）（該檔在 `.gitignore`）。
+- 沒有 push、部署、讀 `.env*`、呼叫 RoamerHost，也沒有動 `~/Desktop/Three2blender`。
