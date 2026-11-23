@@ -162,6 +162,8 @@ export function initWishWall({ canvas, camera, wishLeaves }) {
       });
       // 自己的楓葉放在鏡頭前方中央飄落；lastId 不往前跳，避免漏掉同時間別人的留言
       wishLeaves.add(data.wish, { arrive: 'fall', featured: true });
+      // 給環境音（main.js）一個「留下楓葉」的提示音時機；不帶留言內容
+      window.dispatchEvent(new CustomEvent('wish:planted'));
       setCount(data.count);
       messageInput.value = '';
       validateForm();

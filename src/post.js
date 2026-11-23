@@ -5,8 +5,8 @@ import { SENSOR_HEIGHT } from './lens.js';
 //   場景 → 線性 HDR render target（含深度）
 //   → 景深：半解析度算模糊圈（CoC）並做圓形光圈收集
 //   → lens glow：1/4 解析度抽高光後三層擴散
-//   → 光柱：把同一份高光朝太陽的畫面位置做放射狀累積（被樹冠遮住的地方自然沒有光）
-//   → 合成 + 暗角 + tone mapping（ACES Filmic，全程只做這一次）+ sRGB 輸出
+//   → 體積光柱：沿視線查太陽陰影貼圖，算出被樹冠遮擋的散射光（1/4 解析度；high 32 步、mid 14 步）
+//   → 合成 + 對比調色 + 暗角 + tone mapping（ACES Filmic，全程只做這一次）+ sRGB 輸出
 // 主畫面解析度固定跟著 renderer 的 drawing buffer；效能不夠時先降輔助 pass（auxScale）。
 
 const FULLSCREEN_VERTEX = /* glsl */ `
@@ -115,34 +115,100 @@ const BLUR_FRAGMENT = /* glsl */ `
   }
 `;
 
-// 光柱：每個像素朝太陽的畫面位置走，累積沿途的高光。
-// 除以權重總和，改取樣數不會改變曝光；畫面外的取樣直接略過（不 clamp 到邊緣）。
-const RAYS_FRAGMENT = /* glsl */ `
+// 體積光柱：每個像素沿視線在空氣裡走幾步，每一步查太陽的陰影貼圖——
+// 被樹冠擋住的地方沒有散射光，葉縫裡透出來的光就變成一條條真正被遮擋的光柱。
+// 散射用 Henyey–Greenstein 前向相位：朝太陽方向看（逆光）時最亮。
+// 低解析度計算、固定的抖動，接著做深度感知的模糊把抖動抹平。
+const VOLUME_FRAGMENT = /* glsl */ `
   varying vec2 vUv;
-  uniform sampler2D tBright;
-  uniform vec2 uSunUv;
-  uniform float uAspect;
-  const int SAMPLES = 32;
+  uniform sampler2D tDepth;
+  uniform sampler2DShadow tShadow;
+  uniform mat4 uShadowMatrix;
+  uniform mat4 uInverseProjection;
+  uniform mat4 uCameraWorld;
+  uniform vec3 uCameraPosition;
+  uniform vec3 uSunDir;
+  uniform vec3 uSunColor;
+  uniform float uNear;
+  uniform float uFar;
+  uniform float uMaxDistance;
+  uniform float uShadowReady;
+  uniform float uIntensity;
+  float interleavedNoise( vec2 p ) {
+    return fract( 52.9829189 * fract( dot( p, vec2( 0.06711056, 0.00583715 ) ) ) );
+  }
+  float beamHash( vec2 p ) {
+    p = fract( p * vec2( 123.34, 456.21 ) );
+    p += dot( p, p + 45.32 );
+    return fract( p.x * p.y );
+  }
+  float beamNoise( vec2 p ) {
+    vec2 i = floor( p );
+    vec2 u = fract( p );
+    u = u * u * ( 3.0 - 2.0 * u );
+    return mix( mix( beamHash( i ), beamHash( i + vec2( 1.0, 0.0 ) ), u.x ),
+                mix( beamHash( i + vec2( 0.0, 1.0 ) ), beamHash( i + vec2( 1.0, 1.0 ) ), u.x ), u.y );
+  }
+  // 沿太陽方向不變的圖樣：把點沿光線投到樹冠高度的平面上取雜訊。
+  // 同一條光線上的值都一樣，所以亮暗會沿著光的方向拉成一條條光束（像光穿過遠處的葉縫）
+  float beamPattern( vec3 p ) {
+    vec2 q = p.xz + uSunDir.xz * ( ( 6.0 - p.y ) / uSunDir.y );
+    float n = beamNoise( q * 0.55 ) * 0.65 + beamNoise( q * 1.4 + 3.1 ) * 0.35;
+    return 0.15 + 1.7 * smoothstep( 0.42, 0.78, n );
+  }
   void main() {
-    vec2 delta = vUv - uSunUv;
-    vec2 stride = delta * 0.92 / float(SAMPLES);
-    // 固定的雜訊抖動：消除階梯，又不會隨時間閃爍
-    float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-    vec2 uv = vUv - stride * jitter;
-    vec3 sum = vec3(0.0);
-    float weight = 1.0;
-    float weightSum = 0.0;
-    for (int i = 0; i < SAMPLES; i++) {
-      uv -= stride;
-      if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
-        sum += min(texture2D(tBright, uv).rgb, vec3(4.0)) * weight;
+    float z = texture2D( tDepth, vUv ).x;
+    vec4 view = uInverseProjection * vec4( vUv * 2.0 - 1.0, z * 2.0 - 1.0, 1.0 );
+    view /= view.w;
+    vec3 world = ( uCameraWorld * vec4( view.xyz, 1.0 ) ).xyz;
+    vec3 ray = world - uCameraPosition;
+    float distance = length( ray );
+    vec3 dir = ray / max( distance, 1e-4 );
+    float tMax = min( distance, uMaxDistance );
+    float stepLength = tMax / float( STEPS );
+    float offset = interleavedNoise( gl_FragCoord.xy );
+    float lit = 0.0;
+    for ( int i = 0; i < STEPS; i++ ) {
+      float t = ( float( i ) + offset ) * stepLength;
+      vec3 p = uCameraPosition + dir * t;
+      vec4 s = uShadowMatrix * vec4( p, 1.0 );
+      float visible = 1.0;
+      if ( uShadowReady > 0.5 && all( greaterThan( s.xyz, vec3( 0.0 ) ) ) && all( lessThan( s.xyz, vec3( 1.0 ) ) ) ) {
+        visible = texture( tShadow, vec3( s.xy, s.z - 0.0015 ) );
       }
-      weightSum += weight;
-      weight *= 0.955;
+      // 低處空氣較濃（地面的薄霧），往上變稀
+      float density = exp( - 0.22 * max( p.y, 0.0 ) ) * beamPattern( p );
+      lit += visible * density * exp( - 0.018 * t );
     }
-    float distance = length(delta * vec2(uAspect, 1.0));
-    float falloff = 1.0 / (1.0 + distance * distance * 3.5);
-    gl_FragColor = vec4(sum / max(weightSum, 0.0001) * falloff, 1.0);
+    float mu = dot( dir, uSunDir );
+    const float g = 0.68;
+    float hg = ( 1.0 - g * g ) / pow( 1.0 + g * g - 2.0 * g * mu, 1.5 );
+    float phase = ( 0.06 + hg * 0.1 ) * uIntensity;
+    float linear = 2.0 * uNear * uFar / ( uFar + uNear - ( z * 2.0 - 1.0 ) * ( uFar - uNear ) );
+    gl_FragColor = vec4( uSunColor * lit * stepLength * phase, linear );
+  }
+`;
+
+// 深度感知的可分離模糊（光柱專用）：alpha 存線性深度，深度差太多的取樣權重趨近 0，
+// 樹幹前後的光不會互相滲過去
+const VOLUME_BLUR_FRAGMENT = /* glsl */ `
+  varying vec2 vUv;
+  uniform sampler2D tVolume;
+  uniform vec2 uStep;
+  void main() {
+    vec4 center = texture2D( tVolume, vUv );
+    vec3 sum = center.rgb;
+    float total = 1.0;
+    for ( int i = 1; i <= 4; i++ ) {
+      float w = exp( - float( i * i ) / 8.0 );
+      for ( int side = -1; side <= 1; side += 2 ) {
+        vec4 tap = texture2D( tVolume, vUv + uStep * float( i * side ) );
+        float depthWeight = 1.0 / ( 1.0 + abs( tap.a - center.a ) / max( center.a, 0.1 ) * 12.0 );
+        sum += tap.rgb * w * depthWeight;
+        total += w * depthWeight;
+      }
+    }
+    gl_FragColor = vec4( sum / total, center.a );
   }
 `;
 
@@ -158,11 +224,12 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
   uniform float uRays;
   uniform float uVignette;
   uniform float uAspect;
+  uniform float uContrast;
   ${DEPTH_GLSL}
   void main() {
     vec3 color = texture2D(tColor, vUv).rgb;
 
-    #if defined(USE_DOF) || defined(USE_RAYS)
+    #ifdef USE_DOF
       float depth = linearDepth(vUv);
     #endif
 
@@ -178,9 +245,16 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
     #endif
 
     #ifdef USE_RAYS
-      // 光柱主要落在遠處的空氣裡；近處的表面（許願葉、樹幹）只吃一小部分，保住對比
-      color += texture2D(tRays, vUv).rgb * uRays * mix(0.3, 1.0, smoothstep(9.0, 55.0, depth));
+      // 體積光柱已經只積分到表面為止，直接疊加
+      color += texture2D(tRays, vUv).rgb * uRays;
     #endif
+
+    // 調色：以 18% 灰為中心拉開對比（暗部更深、亮部更透），再讓暗部略偏冷、亮部偏暖
+    float lum = max(dot(color, vec3(0.2126, 0.7152, 0.0722)), 1e-5);
+    float graded = 0.18 * pow(lum / 0.18, uContrast);
+    color *= graded / lum;
+    float shadowMix = 1.0 - smoothstep(0.0, 0.12, graded);
+    color *= mix(vec3(1.0), vec3(0.9, 0.95, 1.08), shadowMix * 0.5);
 
     vec2 fromCenter = (vUv - 0.5) * vec2(min(uAspect, 1.6) / 1.6 + 0.35, 1.0);
     color *= 1.0 - uVignette * smoothstep(0.32, 0.95, length(fromCenter) * 1.35);
@@ -222,8 +296,11 @@ export function createPost(renderer, { sunDirection }) {
     renderer.capabilities.isWebGL2 !== false &&
     (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
 
-  const settings = { dof: true, glow: true, rays: true, msaa: 4, auxScale: 1 };
-  const look = { glow: 0.28, rays: 0.45, vignette: 0.3, threshold: 1.6, fStop: 1.4, maxCoc: 0.009 };
+  /** rays：'full'（high）、'lite'（mid 的簡化版）或 false */
+  const settings = { dof: true, glow: true, rays: 'full', msaa: 4, auxScale: 1 };
+  const look = { glow: 0.2, rays: 1, vignette: 0.42, threshold: 1.8, fStop: 1.4, maxCoc: 0.009, contrast: 1.18 };
+  /** 太陽的平行光（陰影貼圖給體積光柱用），由 setSun() 指定 */
+  let sunLight = null;
   const size = new THREE.Vector2(1, 1);
 
   const sceneTarget = createTarget({ depthBuffer: true, samples: settings.msaa });
@@ -234,8 +311,10 @@ export function createPost(renderer, { sunDirection }) {
   const dofTarget = createTarget();
   // lens glow 的三層：1/4、1/8、1/16，各有一張暫存
   const glow = [0, 1, 2].map(() => ({ a: createTarget(), b: createTarget() }));
+  // 光柱：raysTemp 放原始結果，raysTarget 放橫向模糊，縱向模糊再寫回 raysTemp 給合成用
   const raysTarget = createTarget();
-  const allTargets = [sceneTarget, cocTarget, dofTarget, raysTarget, ...glow.flatMap((g) => [g.a, g.b])];
+  const raysTemp = createTarget();
+  const allTargets = [sceneTarget, cocTarget, dofTarget, raysTarget, raysTemp, ...glow.flatMap((g) => [g.a, g.b])];
 
   const depthUniforms = {
     tDepth: { value: sceneTarget.depthTexture },
@@ -260,11 +339,27 @@ export function createPost(renderer, { sunDirection }) {
     uThreshold: { value: look.threshold },
   });
   const blurMaterial = pass(BLUR_FRAGMENT, { tColor: { value: null }, uStep: { value: new THREE.Vector2() } });
-  const raysMaterial = pass(RAYS_FRAGMENT, {
-    tBright: { value: glow[0].a.texture },
-    uSunUv: { value: new THREE.Vector2(0.5, 0.5) },
-    uAspect: { value: 1 },
-  });
+  const volumeUniforms = {
+    tDepth: { value: sceneTarget.depthTexture },
+    tShadow: { value: null },
+    uShadowMatrix: { value: new THREE.Matrix4() },
+    uInverseProjection: { value: new THREE.Matrix4() },
+    uCameraWorld: { value: new THREE.Matrix4() },
+    uCameraPosition: { value: new THREE.Vector3() },
+    uSunDir: { value: sunDirection.clone() },
+    uSunColor: { value: new THREE.Color(1.0, 0.62, 0.32) },
+    uNear: depthUniforms.uNear,
+    uFar: depthUniforms.uFar,
+    uMaxDistance: { value: 48 },
+    uShadowReady: { value: 0 },
+    uIntensity: { value: 0.05 },
+  };
+  // 兩種份量（都在 1/4 解析度：光柱是低頻的，深度感知模糊補回邊緣）：high 32 步，mid 14 步
+  const volumeMaterials = {
+    full: pass(VOLUME_FRAGMENT, volumeUniforms, { defines: { STEPS: 32 } }),
+    lite: pass(VOLUME_FRAGMENT, volumeUniforms, { defines: { STEPS: 14 } }),
+  };
+  const volumeBlurMaterial = pass(VOLUME_BLUR_FRAGMENT, { tVolume: { value: null }, uStep: { value: new THREE.Vector2() } });
   const compositeMaterial = pass(
     COMPOSITE_FRAGMENT,
     {
@@ -273,11 +368,13 @@ export function createPost(renderer, { sunDirection }) {
       tGlow0: { value: glow[0].a.texture },
       tGlow1: { value: glow[1].a.texture },
       tGlow2: { value: glow[2].a.texture },
-      tRays: { value: raysTarget.texture },
+      // 模糊後的光柱最後落在 raysTemp（見 renderVolume）
+      tRays: { value: raysTemp.texture },
       uGlow: { value: look.glow },
       uRays: { value: look.rays },
       uVignette: { value: look.vignette },
       uAspect: { value: 1 },
+      uContrast: { value: look.contrast },
       ...depthUniforms,
     },
     { defines: {} },
@@ -319,12 +416,14 @@ export function createPost(renderer, { sunDirection }) {
       level.a.setSize(w, h);
       level.b.setSize(w, h);
     });
-    raysTarget.setSize(glow[0].a.width, glow[0].a.height);
+    const raysDivisor = 4;
+    raysTarget.setSize(even((width / raysDivisor) * aux), even((height / raysDivisor) * aux));
+    raysTemp.setSize(raysTarget.width, raysTarget.height);
 
     bokehMaterial.uniforms.uTexel.value.set(1 / cocTarget.width, 1 / cocTarget.height);
     depthUniforms.uMaxCoc.value = Math.max(look.maxCoc * height, 2);
     bokehMaterial.uniforms.uRadius.value = depthUniforms.uMaxCoc.value * (cocTarget.height / height);
-    compositeMaterial.uniforms.uAspect.value = raysMaterial.uniforms.uAspect.value = width / height;
+    compositeMaterial.uniforms.uAspect.value = width / height;
   }
 
   function syncDefines() {
@@ -337,27 +436,40 @@ export function createPost(renderer, { sunDirection }) {
   }
   syncDefines();
 
-  const sunPoint = new THREE.Vector3();
   const forward = new THREE.Vector3();
-  let sunVisibility = 0;
 
-  /** 太陽在畫面上的位置；在鏡頭後方或離畫面太遠時光柱淡出 */
-  function updateSun(camera) {
+  /** 太陽在鏡頭後方時光柱幾乎看不到（前向散射），直接略過這個 pass */
+  function sunFacing(camera) {
     camera.getWorldDirection(forward);
-    if (forward.dot(sunDirection) <= 0.05) {
-      sunVisibility = 0;
-      return;
-    }
-    sunPoint.copy(camera.position).addScaledVector(sunDirection, 100).project(camera);
-    raysMaterial.uniforms.uSunUv.value.set(sunPoint.x * 0.5 + 0.5, sunPoint.y * 0.5 + 0.5);
-    const offscreen = Math.max(Math.abs(sunPoint.x), Math.abs(sunPoint.y));
-    sunVisibility = 1 - THREE.MathUtils.smoothstep(offscreen, 1.05, 1.7);
+    return THREE.MathUtils.smoothstep(forward.dot(sunDirection), -0.35, 0.1);
+  }
+
+  function renderVolume(camera) {
+    const map = sunLight?.shadow.map?.depthTexture ?? null;
+    volumeUniforms.tShadow.value = map;
+    volumeUniforms.uShadowReady.value = map ? 1 : 0;
+    if (sunLight) volumeUniforms.uShadowMatrix.value.copy(sunLight.shadow.matrix);
+    volumeUniforms.uInverseProjection.value.copy(camera.projectionMatrixInverse);
+    volumeUniforms.uCameraWorld.value.copy(camera.matrixWorld);
+    volumeUniforms.uCameraPosition.value.setFromMatrixPosition(camera.matrixWorld);
+    draw(volumeMaterials[settings.rays] ?? volumeMaterials.full, raysTemp);
+    volumeBlurMaterial.uniforms.tVolume.value = raysTemp.texture;
+    volumeBlurMaterial.uniforms.uStep.value.set(1 / raysTemp.width, 0);
+    draw(volumeBlurMaterial, raysTarget);
+    volumeBlurMaterial.uniforms.tVolume.value = raysTarget.texture;
+    volumeBlurMaterial.uniforms.uStep.value.set(0, 1 / raysTarget.height);
+    draw(volumeBlurMaterial, raysTemp);
   }
 
   return {
     supported,
     settings,
     look,
+
+    /** 體積光柱用的太陽（DirectionalLight，需開陰影） */
+    setSun(light) {
+      sunLight = light;
+    },
 
     /** 切換效果與輔助 pass 的解析度比例（畫質分級用） */
     configure(next) {
@@ -367,7 +479,7 @@ export function createPost(renderer, { sunDirection }) {
         sceneTarget.samples = settings.msaa;
         sceneTarget.dispose();
       }
-      if (settings.auxScale !== before.auxScale) allocate();
+      if (settings.auxScale !== before.auxScale || settings.rays !== before.rays) allocate();
       syncDefines();
     },
 
@@ -403,8 +515,9 @@ export function createPost(renderer, { sunDirection }) {
         draw(bokehMaterial, dofTarget);
       }
 
-      const rays = settings.rays && (updateSun(camera), sunVisibility > 0.01);
-      if (settings.glow || rays) {
+      const facing = settings.rays ? sunFacing(camera) : 0;
+      const rays = facing > 0.01;
+      if (settings.glow) {
         brightMaterial.uniforms.uThreshold.value = look.threshold;
         draw(brightMaterial, glow[0].a);
         glow.forEach((level, i) => {
@@ -414,11 +527,12 @@ export function createPost(renderer, { sunDirection }) {
           blur(level.b, level.a, 0, 1 / level.b.height);
         });
       }
-      if (rays) draw(raysMaterial, raysTarget);
+      if (rays) renderVolume(camera);
 
       compositeMaterial.uniforms.uGlow.value = settings.glow ? look.glow : 0;
-      compositeMaterial.uniforms.uRays.value = rays ? look.rays * sunVisibility : 0;
+      compositeMaterial.uniforms.uRays.value = rays ? look.rays * facing : 0;
       compositeMaterial.uniforms.uVignette.value = look.vignette;
+      compositeMaterial.uniforms.uContrast.value = look.contrast;
       draw(compositeMaterial, null);
     },
 

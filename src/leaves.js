@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LEAF_COLORS, pick, range } from './palette.js';
+import { pickLeafHue, range } from './palette.js';
 import { groundHeight, groundNormal } from './environment.js';
 import { leafTransmission } from './leafShading.js';
 
@@ -62,14 +62,15 @@ function createBentLeafGeometry() {
 
 // 許願楓葉（wishLeaves.js）共用同一份輪廓，但材質與光暈邏輯各自獨立
 export const leafGeometry = createFlatLeafGeometry();
-const bentLeafGeometry = createBentLeafGeometry();
+export const bentLeafGeometry = createBentLeafGeometry();
 
 /**
  * 一般落葉的材質：正面／背面色差、程序化葉脈、跟著太陽的透光。
  * 沒有 emissive：背光且在陰影裡的葉子就是暗的，只有許願葉會自己發光。
  */
 function createLeafMaterial() {
-  const material = new THREE.MeshStandardMaterial({ roughness: 0.72, side: THREE.DoubleSide });
+  // 粗糙度高、不反光：去掉塑膠感
+  const material = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide });
   const transmission = leafTransmission({ transmit: 0.85, forward: 2.2 });
   material.onBeforeCompile = (shader) => {
     transmission(shader);
@@ -120,7 +121,7 @@ function createLeafMesh(count, rng) {
   const mesh = new THREE.InstancedMesh(bentLeafGeometry, leafMaterial, count);
   const color = new THREE.Color();
   for (let i = 0; i < count; i++) {
-    color.setHex(pick(rng, LEAF_COLORS)).multiplyScalar(range(rng, 0.85, 1.15));
+    color.setHex(pickLeafHue(rng)).multiplyScalar(range(rng, 0.8, 1.1));
     mesh.setColorAt(i, color);
   }
   mesh.instanceColor.needsUpdate = true;
@@ -161,7 +162,8 @@ export function createFallingLeaves({ count, rng, speedScale = 1 }) {
       fall: range(rng, 0.42, 0.95),
       slip: range(rng, 0.5, 1.5),
       windResponse: range(rng, 0.7, 1.3),
-      scale: range(rng, 0.18, 0.34),
+      // 第二輪：裝飾落葉變小、大小不一（多數小葉，少數大葉），讓發光的許願葉一眼就分得出來
+      scale: 0.07 + 0.2 * rng() ** 1.7,
       x: 0,
       y: 0,
       z: 0,
@@ -225,8 +227,47 @@ export function createFallingLeaves({ count, rng, speedScale = 1 }) {
   };
 }
 
-/** 靜止鋪在地面的落葉：貼著地表高度與法線，不懸空 */
-export function createGroundLeaves({ count, rng }) {
+/**
+ * 地上落葉成堆的位置：樹根周圍、小徑兩側的邊緣，以及零星幾處。
+ * trees：[{ x, z, scale }]。回傳 [{ x, z, radius, amount }]，地面貼圖（environment.js）與落葉配置共用。
+ */
+export function createLitterSpots({ trees, rng }) {
+  const spots = [];
+  const inArea = (x, z) => x > AREA.xMin - 4 && x < AREA.xMax + 4 && z > AREA.zMin - 6 && z < AREA.zMax + 4;
+  for (const tree of trees) {
+    const piles = 1 + Math.floor(rng() * 3);
+    for (let i = 0; i < piles; i++) {
+      const angle = rng() * TAU;
+      const distance = range(rng, 0.4, 2.2) * tree.scale;
+      const x = tree.x + Math.cos(angle) * distance;
+      const z = tree.z + Math.sin(angle) * distance;
+      if (inArea(x, z)) spots.push({ x, z, radius: range(rng, 0.45, 1.2), amount: range(rng, 0.6, 1) });
+    }
+  }
+  // 小徑邊緣被踢到兩側堆起來
+  for (let z = AREA.zMin; z < AREA.zMax + 3; z += range(rng, 1.6, 3.2)) {
+    const side = rng() < 0.5 ? -1 : 1;
+    spots.push({ x: side * range(rng, 1.5, 3.0), z, radius: range(rng, 0.35, 0.9), amount: range(rng, 0.5, 0.9) });
+  }
+  for (let i = 0; i < 14; i++) {
+    spots.push({
+      x: range(rng, AREA.xMin, AREA.xMax),
+      z: range(rng, AREA.zMin, AREA.zMax),
+      radius: range(rng, 0.4, 1.0),
+      amount: range(rng, 0.4, 0.8),
+    });
+  }
+  return spots;
+}
+
+/** 正規分布亂數（Box–Muller） */
+const gaussian = (rng) => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(TAU * rng());
+
+/**
+ * 靜止鋪在地面的落葉：貼著地表高度與法線，不懸空。
+ * 約七成堆在 spots（成堆成簇、彼此交疊），其餘零星散落。
+ */
+export function createGroundLeaves({ count, rng, spots = [] }) {
   const mesh = createLeafMesh(count, rng);
   mesh.receiveShadow = true;
 
@@ -237,21 +278,44 @@ export function createGroundLeaves({ count, rng }) {
   const spin = new THREE.Quaternion();
   const tilt = new THREE.Quaternion();
   const axis = new THREE.Vector3();
+  const weights = spots.map((spot) => spot.radius * spot.radius * spot.amount);
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  const pickSpot = () => {
+    let r = rng() * totalWeight;
+    for (let i = 0; i < spots.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return spots[i];
+    }
+    return spots[spots.length - 1];
+  };
 
   for (let i = 0; i < count; i++) {
-    const x = range(rng, AREA.xMin - 4, AREA.xMax + 4);
-    const z = range(rng, AREA.zMin - 6, AREA.zMax + 4);
-    const scale = range(rng, 0.16, 0.3);
+    let x;
+    let z;
+    let pile = 0;
+    if (spots.length > 0 && rng() < 0.7) {
+      const spot = pickSpot();
+      const gx = gaussian(rng) * spot.radius * 0.6;
+      const gz = gaussian(rng) * spot.radius * 0.6;
+      x = spot.x + gx;
+      z = spot.z + gz;
+      // 堆的中央疊得比較厚
+      pile = Math.exp(-(gx * gx + gz * gz) / (2 * (spot.radius * 0.5) ** 2)) * spot.amount;
+    } else {
+      x = range(rng, AREA.xMin - 4, AREA.xMax + 4);
+      z = range(rng, AREA.zMin - 6, AREA.zMax + 4);
+    }
+    const scale = 0.09 + 0.18 * rng() ** 1.4;
     groundNormal(x, z, normal);
-    // 葉片中央對折後最低點在中肋，抬高一點點讓邊緣翹起、中肋貼地
-    dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1), z);
+    // 葉片中央對折後最低點在中肋，抬高一點點讓邊緣翹起、中肋貼地；堆裡的葉子疊高一些
+    dummy.position.set(x, groundHeight(x, z) + scale * range(rng, 0.04, 0.1) + pile * range(rng, 0, 0.06), z);
 
     align.setFromUnitVectors(up, normal);
     spin.setFromAxisAngle(up, rng() * TAU);
-    // 少數葉子翻面（露出較淡的背面），其餘只有些微歪斜
+    // 少數葉子翻面（露出較淡的背面），其餘只有些微歪斜；堆裡的葉子歪得多
     const flipped = rng() < 0.3;
     axis.set(rng() - 0.5, rng() - 0.5, 0).normalize();
-    tilt.setFromAxisAngle(axis, (flipped ? Math.PI : 0) + range(rng, -0.22, 0.22));
+    tilt.setFromAxisAngle(axis, (flipped ? Math.PI : 0) + range(rng, -0.22, 0.22) * (1 + pile * 2));
     dummy.quaternion.copy(align).multiply(spin).multiply(tilt);
     dummy.scale.setScalar(scale);
     dummy.updateMatrix();

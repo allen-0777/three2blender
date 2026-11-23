@@ -3,8 +3,12 @@ import './atmosphere.js';
 import * as THREE from 'three';
 import { createRng } from './palette.js';
 import { createEnvironment, sunDirection } from './environment.js';
-import { createForest } from './trees.js';
-import { createFallingLeaves, createGroundLeaves } from './leaves.js';
+import { createForest, forestLayout, FOREST_SEED } from './trees.js';
+import { createFallingLeaves, createGroundLeaves, createLitterSpots } from './leaves.js';
+import { createSparkles } from './sparkles.js';
+import { komorebiUniforms } from './komorebi.js';
+import { createFraming, KEEP_OUT } from './framing.js';
+import { createAmbience } from './ambience.js';
 import { createWishLeaves } from './wishLeaves.js';
 import { initWishWall } from './wishWall.js';
 import { createPost } from './post.js';
@@ -28,7 +32,8 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPrefer
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // tone mapping 只在最後畫到螢幕的那一個 pass 生效（three 對 render target 不做 tone mapping）
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
+// 第二輪：整體曝光降低，亮部留給逆光的葉子、光柱與許願葉
+renderer.toneMappingExposure = 0.92;
 renderer.shadowMap.enabled = true;
 // r187 已移除 PCFSoftShadowMap；PCFShadowMap 本身就是 Vogel disk 柔邊（半影寬度看 light.shadow.radius）
 renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -47,20 +52,29 @@ camera.position.copy(CAMERA_BASE);
 
 // 開場的檔次決定貼圖解析度與陰影圖大小；之後降級只關效果、減份量，不重新載入貼圖
 const rng = createRng(20261121);
-createEnvironment(scene, rng, {
-  textureSize: tier.textureSize,
-  anisotropy: Math.min(tier.anisotropy, renderer.capabilities.getMaxAnisotropy()),
-  shadowMapSize: tier.shadowMapSize,
-});
+// 樹的配置是固定的：地面先用它算樹下 AO、光斑範圍與落葉堆的位置
+const trees = forestLayout();
+const litterSpots = createLitterSpots({ trees, rng });
+const environment = createEnvironment(
+  scene,
+  rng,
+  {
+    textureSize: tier.textureSize,
+    anisotropy: Math.min(tier.anisotropy, renderer.capabilities.getMaxAnisotropy()),
+    shadowMapSize: tier.shadowMapSize,
+  },
+  { trees, litterSpots },
+);
+post.setSun(environment.sun);
 // 楓樹模型非同步載入；用獨立的亂數序列，載入時機不影響其他物件的配置
-createForest(createRng(7), { barkNormals: tier.barkNormals })
+createForest(createRng(FOREST_SEED), { barkNormals: tier.barkNormals })
   .then((forest) => {
     scene.add(forest);
     renderer.shadowMap.needsUpdate = true;
   })
   .catch((error) => console.error('楓樹模型載入失敗', error));
 
-const groundLeaves = createGroundLeaves({ count: tier.groundLeaves, rng });
+const groundLeaves = createGroundLeaves({ count: tier.groundLeaves, rng, spots: litterSpots });
 scene.add(groundLeaves);
 const groundLeafCapacity = tier.groundLeaves;
 
@@ -72,9 +86,18 @@ const fallingLeaves = createFallingLeaves({
 });
 scene.add(fallingLeaves.mesh);
 
+// 空氣裡的灰塵（只在光柱裡看得見）與慢慢閃爍的金色光點
+const sparkles = createSparkles({ rng, sun: environment.sun, sunDirection, dust: reducedMotion ? 500 : 1400, gold: 160 });
+scene.add(sparkles.points);
+
 // 許願楓葉：每片對應資料庫裡的一則留言
-const wishLeaves = createWishLeaves({ camera, cameraBase: CAMERA_BASE, reducedMotion });
+const wishLeaves = createWishLeaves({ camera, cameraBase: CAMERA_BASE, reducedMotion, keepOut: KEEP_OUT });
 scene.add(wishLeaves.group);
+
+// 前景框景的楓枝掛在鏡頭底下（鏡頭要加進場景，子物件才會被畫出來）
+const framing = createFraming();
+camera.add(framing.group);
+scene.add(camera);
 
 // ---- 鏡頭：36 mm 寬 16:9 片門，焦距隨畫面比例配合 ----
 const lens = { focalLength: 35, focus: 11 };
@@ -95,6 +118,7 @@ function resize() {
   camera.fov = verticalFieldOfView(lens.focalLength);
   camera.updateProjectionMatrix();
   post.resize();
+  framing.layout(camera);
   wishLeaves.layout();
 }
 
@@ -110,6 +134,7 @@ function applyTier() {
   });
   fallingLeaves.setCount(Math.min(fallingLeafCapacity, reducedMotion ? 250 : tier.fallingLeaves));
   groundLeaves.count = Math.min(groundLeafCapacity, tier.groundLeaves);
+  sparkles.setLevel(tier.sparkles);
   document.documentElement.dataset.quality = tierName;
   resize();
 }
@@ -139,6 +164,9 @@ function degrade(averageMs) {
 const frameWatch = createFrameWatch({ onSlow: degrade });
 
 const wishWall = initWishWall({ canvas, camera, wishLeaves });
+// 環境音：預設靜音，右下角開關被點了才建立 AudioContext（瀏覽器自動播放規則）
+const ambience = createAmbience({ button: document.getElementById('sound-toggle') });
+window.addEventListener('wish:planted', () => ambience.chime());
 // 給除錯與自動化驗收用
 window.__wishWall = { leaves: wishLeaves, ...wishWall };
 window.__visual = {
@@ -156,11 +184,18 @@ window.__visual = {
   },
   look: post.look,
   renderer,
+  scene,
+  ambience,
   /** 驗收用：固定鏡頭位置與注視點（null 還原成預設的滑鼠視差鏡頭） */
   setPose(pose) {
     posed = pose ? { position: new THREE.Vector3(...pose.position), target: new THREE.Vector3(...pose.target) } : null;
   },
   info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, ...post.info() }),
+  /** 除錯／效能量測用：直接切換後期效果（{ dof, glow, rays, auxScale }） */
+  configure(next) {
+    post.configure(next);
+    post.resize();
+  },
   setExposure(value) {
     renderer.toneMappingExposure = value;
   },
@@ -180,6 +215,7 @@ if (!reducedMotion) {
 }
 
 const formDialog = document.getElementById('wish-form-dialog');
+const drawingSize = new THREE.Vector2();
 let previous = performance.now();
 let frame = 0;
 let pendingDt = 0;
@@ -216,6 +252,9 @@ renderer.setAnimationLoop((now) => {
 
   // 對焦：平常停在讓整面許願牆清楚的距離；點開某片時慢慢拉到那一片，關卡片後回來
   lens.focus += (wishLeaves.focusDepth() - lens.focus) * (1 - Math.exp(-dt * 2.2));
+
+  komorebiUniforms.uKomorebiTime.value = reducedMotion ? 0 : time;
+  sparkles.update(reducedMotion ? time * 0.3 : time, camera, renderer.getDrawingBufferSize(drawingSize).y);
 
   post.render(scene, camera, lens);
 });

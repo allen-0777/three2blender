@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { range } from './palette.js';
+import { createRng, pickLeafHue, range } from './palette.js';
 import { groundHeight } from './environment.js';
 import { leafTransmission } from './leafShading.js';
+import { SUN_DIRECTION } from './palette.js';
 
 // 楓樹模型由 blender/generate_trees.py 產生（npm run models）。
 // GLB 內每個變體有兩個網格：Maple_<n>_Trunk 與 Maple_<n>_Foliage，
@@ -121,29 +122,67 @@ function createTrunkMaterial({ barkNormals }) {
   return material;
 }
 
-// 樹冠：葉色烘焙在頂點色。透光跟著太陽走（見 leafShading.js），不再無條件自發光；
-// 樹冠內部彼此的陰影只保留一部分，模擬光在葉層之間散開。
+// 樹冠：葉色在頂點色。透光跟著太陽走（見 leafShading.js）。
+// 第二輪：每片葉子帶一個 AO 值（越深入樹冠越暗），以及它在樹冠裡的方位（aCrown），
+// 背向太陽那一側的葉子（也就是逆光時面向鏡頭的那一側）再暗一些；陰影幾乎全部保留，
+// 葉層之間的明暗層次交給陰影貼圖，不再把內部打平。
 function createFoliageMaterial() {
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.82,
+    roughness: 0.95,
     side: THREE.DoubleSide,
   });
-  material.onBeforeCompile = leafTransmission({ transmit: 0.8, forward: 1.6, shadowKeep: 0.45 });
+  const transmission = leafTransmission({ transmit: 1.25, forward: 3.2, shadowKeep: 0.92, layers: 0.14 });
+  material.onBeforeCompile = (shader) => {
+    transmission(shader);
+    shader.uniforms.uCanopySun = { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) };
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+        attribute float aAo;
+        attribute vec3 aCrown;
+        uniform vec3 uCanopySun;
+        varying float vCanopyAo;`,
+      )
+      .replace(
+        '#include <begin_vertex>',
+        /* glsl */ `#include <begin_vertex>
+        {
+          vec3 crownWorld = aCrown;
+          #ifdef USE_INSTANCING
+            crownWorld = mat3( instanceMatrix ) * crownWorld;
+          #endif
+          float sunSide = dot( normalize( crownWorld + vec3( 0.0, 1e-3, 0.0 ) ), uCanopySun );
+          // 樹冠朝太陽的那半邊保留全部亮度，背面往內遞減
+          vCanopyAo = aAo * mix( 0.55, 1.0, smoothstep( -0.6, 0.5, sunSide ) );
+        }`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vCanopyAo;')
+      .replace(
+        '#include <lights_fragment_end>',
+        /* glsl */ `#include <lights_fragment_end>
+        // 環境光幾乎照不進樹冠深處；直射光（含透光）也被外層葉子吃掉一部分
+        reflectedLight.indirectDiffuse *= vCanopyAo * vCanopyAo;
+        reflectedLight.directDiffuse *= mix( 0.35, 1.0, vCanopyAo );
+        reflectedLight.directSpecular *= vCanopyAo * 0.5;`,
+      );
+  };
   return material;
 }
 
-/**
- * 樹冠網格裡每個葉叢中心有一顆低面數的實心團塊（generate_trees.py 原本用來擋葉片之間的空隙），
- * 其餘是一片片扇形三角化的葉子。樹冠材質把每個面都當成會透光的薄葉片，
- * 逆光時團塊朝鏡頭的那一面整片被「穿透光」打亮，看起來像紅燈籠。
- * 團塊與葉片在索引上互不相連，而且固定是 12 個頂點、20 個三角形的二十面體，
- * 所以用連通元件找出來，直接從索引裡拿掉（GLB 原檔不動）。回傳拿掉的團塊數。
- */
-function stripFoliageCores(geometry) {
-  const index = geometry.index;
-  if (!index) return 0;
-  const count = geometry.attributes.position.count;
+// ---- 樹冠重建：GLB 的葉子縮小、重新上色，再在每個葉叢裡補上更多小葉 ----
+const LEAF_SHRINK = 0.6; // GLB 原本的葉片（0.24–0.38）縮成這個比例
+const EXTRA_PER_CLUSTER = 30; // 每個葉叢額外補的小葉數
+// 補葉用的簡化楓葉輪廓（五裂，10 個外緣點），以中心點扇形三角化
+const SMALL_LEAF = [
+  [0, -0.5], [0.3, -0.12], [0.5, -0.04], [0.3, 0.12], [0.36, 0.38],
+  [0, 0.52], [-0.36, 0.38], [-0.3, 0.12], [-0.5, -0.04], [-0.3, -0.12],
+];
+
+/** 連通元件（union-find），回傳每個頂點的根 */
+function components(index, count) {
   const parent = new Int32Array(count);
   for (let i = 0; i < count; i++) parent[i] = i;
   const find = (i) => {
@@ -158,20 +197,212 @@ function stripFoliageCores(geometry) {
     parent[find(index.getX(t + 1))] = a;
     parent[find(index.getX(t + 2))] = a;
   }
-  const vertices = new Int32Array(count);
-  const triangles = new Int32Array(count);
-  for (let i = 0; i < count; i++) vertices[find(i)] += 1;
-  for (let t = 0; t < index.count; t += 3) triangles[find(index.getX(t))] += 1;
+  const roots = new Int32Array(count);
+  for (let i = 0; i < count; i++) roots[i] = find(i);
+  return roots;
+}
 
-  const kept = [];
-  let removed = 0;
-  for (let t = 0; t < index.count; t += 3) {
-    const root = find(index.getX(t));
-    if (vertices[root] === 12 && triangles[root] === 20) removed += 1;
-    else kept.push(index.getX(t), index.getX(t + 1), index.getX(t + 2));
+const smoothstep = (x, a, b) => THREE.MathUtils.smoothstep(x, a, b);
+
+/**
+ * 重建樹冠幾何：
+ *  1. 找出葉叢中心的實心團塊（12 頂點、20 三角形的二十面體）→ 記下葉叢中心與半徑後丟掉（逆光時像燈籠）。
+ *  2. 其餘每片葉子以自身中心縮小，換成 LEAF_HUES 的色相（每片微差），算 AO 與樹冠方位。
+ *  3. 每個葉叢再補 EXTRA_PER_CLUSTER 片小葉，越靠葉叢內側越暗。
+ * 回傳新的 BufferGeometry（position、normal、color、aAo、aCrown）。
+ */
+function rebuildFoliage(geometry, rng) {
+  const index = geometry.index;
+  const position = geometry.attributes.position;
+  const normal = geometry.attributes.normal;
+  const count = position.count;
+  const roots = components(index, count);
+
+  const members = new Map();
+  for (let i = 0; i < count; i++) {
+    const root = roots[i];
+    if (!members.has(root)) members.set(root, []);
+    members.get(root).push(i);
   }
-  if (removed > 0) geometry.setIndex(kept);
-  return removed / 20;
+  const triangleCount = new Map();
+  for (let t = 0; t < index.count; t += 3) {
+    const root = roots[index.getX(t)];
+    triangleCount.set(root, (triangleCount.get(root) ?? 0) + 1);
+  }
+
+  const v = new THREE.Vector3();
+  const centroid = (list) => {
+    const c = new THREE.Vector3();
+    for (const i of list) c.add(v.fromBufferAttribute(position, i));
+    return c.divideScalar(list.length);
+  };
+
+  const clusters = [];
+  const leaves = [];
+  for (const [root, list] of members) {
+    const center = centroid(list);
+    if (list.length === 12 && triangleCount.get(root) === 20) {
+      let extent = 0;
+      for (const i of list) extent = Math.max(extent, v.fromBufferAttribute(position, i).distanceTo(center));
+      clusters.push({ center, radius: extent / 0.42 });
+    } else {
+      leaves.push({ list, center });
+    }
+  }
+  if (clusters.length === 0) return null;
+
+  const crown = new THREE.Vector3();
+  clusters.forEach((c) => crown.add(c.center));
+  crown.divideScalar(clusters.length);
+  let crownRadius = 0;
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (const c of clusters) {
+    crownRadius = Math.max(crownRadius, c.center.distanceTo(crown));
+    yMin = Math.min(yMin, c.center.y - c.radius);
+    yMax = Math.max(yMax, c.center.y + c.radius);
+  }
+  crownRadius += 0.8;
+
+  const nearestCluster = (p) => {
+    let best = clusters[0];
+    let bestD = Infinity;
+    for (const c of clusters) {
+      const d = c.center.distanceToSquared(p);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    return best;
+  };
+
+  // AO：在樹冠裡的深度、在葉叢裡朝內或朝外、高度
+  const outward = new THREE.Vector3();
+  const inCluster = new THREE.Vector3();
+  function occlusion(p) {
+    const cluster = nearestCluster(p);
+    const depth = p.distanceTo(crown) / crownRadius; // 0 中心 … 1 表面
+    outward.subVectors(cluster.center, crown);
+    if (outward.lengthSq() < 1e-6) outward.set(0, 1, 0);
+    outward.normalize();
+    inCluster.subVectors(p, cluster.center);
+    const radial = inCluster.length() / cluster.radius; // 0 葉叢中心 … 1 葉叢外緣
+    const facing = inCluster.lengthSq() > 1e-6 ? inCluster.normalize().dot(outward) : 0;
+    const height = THREE.MathUtils.clamp((p.y - yMin) / (yMax - yMin), 0, 1);
+    let ao = 0.18 + 0.82 * smoothstep(depth, 0.2, 0.95);
+    ao *= 0.55 + 0.45 * smoothstep(radial, 0.35, 1.0);
+    ao *= 0.7 + 0.3 * (0.5 + 0.5 * facing);
+    ao *= 0.72 + 0.28 * height;
+    return THREE.MathUtils.clamp(ao, 0.08, 1);
+  }
+
+  const color = new THREE.Color();
+  const original = new THREE.Color();
+  function leafColor(p, originalColor) {
+    // 一半以上來自新色相分布，保留一點原本變體（樹與樹之間）的色調
+    color.setHex(pickLeafHue(rng)).lerp(originalColor, 0.3);
+    // 每片微差：亮度與色相
+    const hsl = {};
+    color.getHSL(hsl);
+    color.setHSL(hsl.h + range(rng, -0.012, 0.012), Math.min(1, hsl.s * range(rng, 0.9, 1.1)), hsl.l * range(rng, 0.85, 1.1));
+    return color;
+  }
+
+  const out = { position: [], normal: [], color: [], ao: [], crown: [], index: [] };
+  const pushVertex = (p, n, c, ao, crownOffset) => {
+    out.position.push(p.x, p.y, p.z);
+    out.normal.push(n.x, n.y, n.z);
+    out.color.push(c.r, c.g, c.b);
+    out.ao.push(ao);
+    out.crown.push(crownOffset.x, crownOffset.y, crownOffset.z);
+    return out.position.length / 3 - 1;
+  };
+
+  // 2. 原本的葉子：縮小、換色
+  const remap = new Int32Array(count).fill(-1);
+  const p = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  const crownOffset = new THREE.Vector3();
+  for (const leaf of leaves) {
+    const ao = occlusion(leaf.center);
+    crownOffset.subVectors(leaf.center, crown).divideScalar(crownRadius);
+    original.fromBufferAttribute(geometry.attributes.color, leaf.list[0]);
+    const tint = leafColor(leaf.center, original).clone();
+    const centerVertex = Math.min(...leaf.list);
+    for (const i of leaf.list) {
+      p.fromBufferAttribute(position, i).sub(leaf.center).multiplyScalar(LEAF_SHRINK).add(leaf.center);
+      n.fromBufferAttribute(normal, i);
+      // 葉脈匯集處略暗
+      const c = i === centerVertex ? tint.clone().multiplyScalar(0.8) : tint;
+      remap[i] = pushVertex(p, n, c, ao, crownOffset);
+    }
+  }
+  for (let t = 0; t < index.count; t += 3) {
+    const a = remap[index.getX(t)];
+    if (a < 0) continue; // 團塊
+    out.index.push(a, remap[index.getX(t + 1)], remap[index.getX(t + 2)]);
+  }
+
+  // 3. 補小葉
+  const dir = new THREE.Vector3();
+  const tip = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const hang = new THREE.Vector3();
+  const randomUnit = (target) => {
+    const z = range(rng, -1, 1);
+    const a = rng() * Math.PI * 2;
+    const r = Math.sqrt(1 - z * z);
+    return target.set(r * Math.cos(a), z, r * Math.sin(a));
+  };
+  const corner = new THREE.Vector3();
+  for (const cluster of clusters) {
+    for (let k = 0; k < EXTRA_PER_CLUSTER; k++) {
+      randomUnit(dir);
+      if (dir.y < -0.4) dir.y *= -0.4;
+      dir.normalize();
+      // 葉叢外殼最密，往內也有一些（內側的會被 AO 壓暗，填補縫隙）
+      const radial = Math.sqrt(range(rng, 0.12, 1)) * range(rng, 0.85, 1.12);
+      const center = cluster.center.clone().addScaledVector(dir, cluster.radius * radial);
+      center.y -= cluster.radius * 0.1 * radial;
+      const size = range(rng, 0.13, 0.22);
+      // 葉面朝外、葉尖大致下垂
+      randomUnit(n).multiplyScalar(0.55).add(dir).normalize();
+      randomUnit(hang).multiplyScalar(0.6).add(corner.set(0, -1, 0));
+      tip.copy(hang).addScaledVector(n, -hang.dot(n));
+      if (tip.lengthSq() < 1e-6) tip.set(1, 0, 0).cross(n);
+      tip.normalize();
+      right.crossVectors(tip, n);
+
+      const ao = occlusion(center);
+      crownOffset.subVectors(center, crown).divideScalar(crownRadius);
+      const tint = leafColor(center, original.setRGB(0.6, 0.12, 0.05)).clone();
+      const base = pushVertex(
+        corner.copy(center).addScaledVector(n, -size * 0.1),
+        n,
+        tint.clone().multiplyScalar(0.8),
+        ao,
+        crownOffset,
+      );
+      for (const [x, y] of SMALL_LEAF) {
+        corner.copy(center).addScaledVector(right, x * size).addScaledVector(tip, y * size);
+        pushVertex(corner, n, tint, ao, crownOffset);
+      }
+      for (let i = 0; i < SMALL_LEAF.length; i++) {
+        out.index.push(base, base + 1 + i, base + 1 + ((i + 1) % SMALL_LEAF.length));
+      }
+    }
+  }
+
+  const rebuilt = new THREE.BufferGeometry();
+  rebuilt.setAttribute('position', new THREE.Float32BufferAttribute(out.position, 3));
+  rebuilt.setAttribute('normal', new THREE.Float32BufferAttribute(out.normal, 3));
+  rebuilt.setAttribute('color', new THREE.Float32BufferAttribute(out.color, 3));
+  rebuilt.setAttribute('aAo', new THREE.Float32BufferAttribute(out.ao, 1));
+  rebuilt.setAttribute('aCrown', new THREE.Float32BufferAttribute(out.crown, 3));
+  rebuilt.setIndex(out.index);
+  rebuilt.computeBoundingSphere();
+  return rebuilt;
 }
 
 /** 載入 GLB，回傳 [{ trunk: BufferGeometry, foliage: BufferGeometry }, ...] */
@@ -187,12 +418,29 @@ async function loadVariants() {
     const part = match[2].toLowerCase();
     variants[index] ??= {};
     variants[index][part] = child.geometry.clone().applyMatrix4(child.matrixWorld);
-    if (part === 'foliage') stripFoliageCores(variants[index][part]);
+    if (part === 'foliage') {
+      const rebuilt = rebuildFoliage(variants[index][part], createRng(1000 + index));
+      if (rebuilt) variants[index][part] = rebuilt;
+      else {
+        // 找不到葉叢（模型格式不同）時保留原幾何，AO 一律 1
+        const g = variants[index][part];
+        g.setAttribute('aAo', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(1), 1));
+        g.setAttribute('aCrown', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
+      }
+    }
   });
 
   const complete = variants.filter((v) => v?.trunk && v?.foliage);
   if (complete.length === 0) throw new Error(`${MODEL_URL} 內找不到楓樹網格`);
   return complete;
+}
+
+// 樹的配置用固定種子，地面的樹下 AO 與葉縫光斑（environment.js）也用同一份配置
+export const FOREST_SEED = 7;
+
+/** 樹的位置與大小（不含旋轉以外的亂數），給地面預先計算樹下陰暗與光斑範圍用 */
+export function forestLayout() {
+  return layoutTrees(createRng(FOREST_SEED));
 }
 
 /** 沿中央小徑兩側決定每棵樹的位置、旋轉與大小 */

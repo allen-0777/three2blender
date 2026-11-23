@@ -17,8 +17,8 @@ export const HAZE_GLSL = /* glsl */ `
   vec3 mapleHaze(vec3 dir) {
     float toSun = max(dot(dir, MAPLE_SUN_DIR), 0.0);
     // 寬的前向散射 + 靠近太陽的窄亮區
-    vec3 haze = mix(MAPLE_HAZE, MAPLE_HAZE_SUN, pow(toSun, 8.0) * 0.9);
-    return haze + MAPLE_HAZE_SUN * pow(toSun, 40.0) * 0.55;
+    vec3 haze = mix(MAPLE_HAZE, MAPLE_HAZE_SUN, pow(toSun, 6.0) * 0.85);
+    return haze + MAPLE_HAZE_SUN * pow(toSun, 40.0) * 0.45;
   }
 `;
 
@@ -64,6 +64,8 @@ THREE.ShaderChunk.fog_fragment = /* glsl */ `
     float fogOptical = fogDensity * exp( - ${ATMOSPHERE.falloff.toFixed(4)} * max( cameraPosition.y, 0.0 ) )
       * ( 1.0 - exp( - fogSlope * fogDistance ) ) / fogSlope;
     float fogFactor = 1.0 - exp( - max( fogOptical, 0.0 ) );
+    // 霧本身變淡後，遠方另外淡出，地表邊界與林子盡頭不會露出一條線
+    fogFactor = max( fogFactor, smoothstep( ${ATMOSPHERE.farStart.toFixed(1)}, ${ATMOSPHERE.farEnd.toFixed(1)}, fogDistance ) );
     gl_FragColor.rgb = mix( gl_FragColor.rgb, mapleHaze( fogDir ), fogFactor );
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );

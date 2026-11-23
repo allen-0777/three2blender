@@ -35,6 +35,14 @@
       <p class="wish-hint">點一片發光的楓葉，讀讀別人的願望</p>
     </section>
 
+    <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="false" aria-label="開啟環境音" title="開啟環境音">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="sound-toggle__speaker" d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+        <path class="sound-toggle__waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.8a7.2 7.2 0 0 1 0 10.4" />
+        <path class="sound-toggle__mute" d="M15.5 9.5l5 5M20.5 9.5l-5 5" />
+      </svg>
+    </button>
+
     <dialog id="wish-form-dialog" class="wish-dialog" aria-labelledby="wish-form-title">
       <form id="wish-form" class="wish-panel" novalidate>
         <h2 id="wish-form-title">留下你的楓葉</h2>

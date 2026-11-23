@@ -438,6 +438,56 @@ body {
   }
 }
 
+/* 右下角的環境音開關：預設靜音（顯示斜線），按下才出聲 */
+.sound-toggle {
+  position: fixed;
+  right: calc(env(safe-area-inset-right, 0px) + 18px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 246, 230, 0.4);
+  border-radius: 50%;
+  background: rgba(40, 14, 6, 0.38);
+  color: var(--wish-cream);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0.78;
+  transition:
+    opacity 0.2s ease,
+    background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sound-toggle:hover,
+.sound-toggle:focus-visible {
+  opacity: 1;
+  background: rgba(60, 20, 8, 0.55);
+}
+
+.sound-toggle svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sound-toggle__speaker {
+  fill: currentColor;
+}
+
+.sound-toggle[aria-pressed='false'] .sound-toggle__waves,
+.sound-toggle[aria-pressed='true'] .sound-toggle__mute {
+  display: none;
+}
+
 @media (max-width: 768px) {
   /* 手機：對話框靠上，虛擬鍵盤彈出時不會被遮住 */
   .wish-dialog {

@@ -172,8 +172,9 @@ function createMeshes(capacity) {
 /**
  * 建立許願楓葉群。
  * cameraBase：鏡頭的基準位置，用來把每片葉子排進目前畫面比例看得到的範圍。
+ * keepOut：{ x, y } 畫面右上角保留給前景樹枝的範圍（framing.js），葉子的停留位置會避開。
  */
-export function createWishLeaves({ camera, cameraBase, reducedMotion = false, capacity = 140 }) {
+export function createWishLeaves({ camera, cameraBase, reducedMotion = false, capacity = 140, keepOut = null }) {
   const { body, edge, halo } = createMeshes(capacity);
   const group = new THREE.Group();
   group.add(body, edge, halo);
@@ -198,6 +199,14 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     const u = leaf.featured ? leaf.u * 0.4 : leaf.u;
     const v = leaf.featured ? 0.3 + leaf.v * 0.3 : leaf.v;
     leaf.home.set(u * halfWidth, 0.5 + v * (top - 0.5), cameraBase.z - depth);
+    // 避開前景樹枝佔用的右上角（keepOut：畫面座標，中心 0、邊緣 1）
+    if (keepOut) {
+      const screenX = leaf.home.x / (depth * halfTan * camera.aspect);
+      const screenY = (leaf.home.y - cameraBase.y) / (depth * halfTan);
+      if (screenX > keepOut.x - 0.08 && screenY > keepOut.y - 0.12) {
+        leaf.home.y = cameraBase.y + (keepOut.y - 0.12 - 0.25 * leaf.v) * depth * halfTan;
+      }
+    }
   }
 
   function syncColors() {
