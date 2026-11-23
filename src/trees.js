@@ -174,7 +174,7 @@ function createFoliageMaterial() {
 
 // ---- 樹冠重建：GLB 的葉子縮小、重新上色，再在每個葉叢裡補上更多小葉 ----
 const LEAF_SHRINK = 0.6; // GLB 原本的葉片（0.24–0.38）縮成這個比例
-const EXTRA_PER_CLUSTER = 30; // 每個葉叢額外補的小葉數
+const EXTRA_PER_CLUSTER = 22; // 每個葉叢額外補的小葉數
 // 補葉用的簡化楓葉輪廓（五裂，10 個外緣點），以中心點扇形三角化
 const SMALL_LEAF = [
   [0, -0.5], [0.3, -0.12], [0.5, -0.04], [0.3, 0.12], [0.36, 0.38],
