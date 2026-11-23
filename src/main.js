@@ -156,11 +156,17 @@ window.__visual = {
   },
   look: post.look,
   renderer,
+  /** 驗收用：固定鏡頭位置與注視點（null 還原成預設的滑鼠視差鏡頭） */
+  setPose(pose) {
+    posed = pose ? { position: new THREE.Vector3(...pose.position), target: new THREE.Vector3(...pose.target) } : null;
+  },
   info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, ...post.info() }),
   setExposure(value) {
     renderer.toneMappingExposure = value;
   },
 };
+
+let posed = null;
 
 // 滑鼠視差：pointer 為 -1..1
 const pointer = new THREE.Vector2();
@@ -200,6 +206,10 @@ renderer.setAnimationLoop((now) => {
   camera.position.x += (targetX - camera.position.x) * ease;
   camera.position.y += (targetY - camera.position.y) * ease;
   camera.lookAt(LOOK_AT);
+  if (posed) {
+    camera.position.copy(posed.position);
+    camera.lookAt(posed.target);
+  }
 
   // 鏡頭定位後再更新，光暈才會正對鏡頭
   wishLeaves.update(dt, time);
