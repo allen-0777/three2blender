@@ -353,7 +353,8 @@ export function createPost(renderer, { sunDirection }) {
   const raysTemp = createTarget();
   // 前景層：鏡頭前很近的物件（前景樹枝）單獨畫在 1/2 解析度、透明底的 buffer，再用高斯模糊成柔和的剪影。
   // 這種距離的模糊圈遠超過景深 pass 的上限，直接交給景深會有階梯狀的邊緣。
-  const foregroundTarget = createTarget();
+  // 多重取樣：細枝與葉緣在低解析度下才不會變成階梯狀
+  const foregroundTarget = createTarget({ samples: 4 });
   const foregroundTemp = createTarget();
   const allTargets = [sceneTarget, cocTarget, dofTarget, raysTarget, raysTemp, foregroundTarget, foregroundTemp, ...glow.flatMap((g) => [g.a, g.b])];
 

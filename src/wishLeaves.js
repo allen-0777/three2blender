@@ -248,7 +248,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     leaves.forEach((leaf, i) => {
       body.setColorAt(i, leaf.color);
       // 遠近層次：越遠的許願葉邊緣光與光暈越淡，近的與自己剛留下的最亮
-      glowLevel.setScalar(leaf.featured ? FRESH_GLOW : 1.15 - 0.55 * leaf.depthT);
+      glowLevel.setScalar(leaf.featured ? FRESH_GLOW : 1.15 - 0.7 * leaf.depthT);
       edge.setColorAt(i, glowLevel);
       halo.setColorAt(i, glowLevel);
     });
@@ -370,7 +370,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       leaf.emphasis += (targetEmphasis - leaf.emphasis) * ease;
       const appear = leaf.arrive === 'fall' ? Math.min(t * 12, 1) : settled;
       // 被點開的那片在卡片後面略縮小，不從卡片兩側露出葉尖（焦點仍然跟著它）
-      leaf.scaleNow = leaf.size * fit * appear * (1 - leaf.emphasis * 0.3);
+      leaf.scaleNow = leaf.size * fit * appear * (1 - leaf.emphasis * 0.45);
 
       dummy.position.copy(leaf.position);
       dummy.rotation.set(

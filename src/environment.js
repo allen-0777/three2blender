@@ -71,8 +71,8 @@ function createSky() {
 
         // 太陽：收斂的光暈 + 小圓盤（HDR，交給後期的 lens glow）。
         // 第二輪：太陽藏在樹冠邊緣後面，圓盤縮小、亮度壓低，不再整團過曝
-        color += MAPLE_HAZE_SUN * (pow(toSun, 300.0) * 0.5 + pow(toSun, 2400.0) * 1.4);
-        color += vec3(1.0, 0.84, 0.6) * smoothstep(0.99955, 0.99985, toSun) * 3.5;
+        color += MAPLE_HAZE_SUN * (pow(toSun, 300.0) * 0.55 + pow(toSun, 1600.0) * 1.6);
+        color += vec3(1.0, 0.84, 0.6) * smoothstep(0.9994, 0.99985, toSun) * 2.2;
 
         gl_FragColor = vec4(color, 1.0);
         #include <tonemapping_fragment>

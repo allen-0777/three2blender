@@ -15,7 +15,7 @@ const quality = process.env.QA_QUALITY ?? 'high';
 
 // 低角度仰望樹冠、地面近景
 export const POSES = {
-  up: { position: [-3.6, 0.45, 2.5], target: [-5.19, 4.52, -6.5] },
+  up: { position: [-2.2, 0.45, 0.0], target: [-4.44, 4.2, -9.0] },
   ground: { position: [-1.6, 1.1, -3.0], target: [-4.6, 0.0, -8.5], focus: 5 },
 };
 

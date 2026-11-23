@@ -123,6 +123,8 @@ body {
 }
 
 .wish-bar {
+  /* 底部 UI 後面一層很淡的暗色漸層：任何鏡位下按鈕與說明文字都讀得清楚 */
+  background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(30, 9, 3, 0.42), transparent 75%);
   position: fixed;
   left: 0;
   right: 0;
@@ -464,7 +466,7 @@ body:has(#wish-card-dialog[open]) .title {
   padding: 0;
   border: 1px solid rgba(255, 246, 230, 0.4);
   border-radius: 50%;
-  background: rgba(40, 14, 6, 0.38);
+  background: rgba(36, 12, 5, 0.58);
   color: var(--wish-cream);
   cursor: pointer;
   backdrop-filter: blur(6px);
