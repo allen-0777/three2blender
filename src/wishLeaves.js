@@ -14,7 +14,7 @@ const HALO_COLOR = 0xffc978;
 // （用葉色再乘一次自己，保住飽和度）
 const BODY_GLOW = 0.8;
 // 邊緣光：緊貼輪廓處的亮度（疊加）與往外淡出的寬度（葉片約 1 單位大）
-const EDGE_GLOW = 0.6;
+const EDGE_GLOW = 0.42;
 const EDGE_WIDTH = 0.19;
 
 const TAU = Math.PI * 2;
@@ -224,10 +224,9 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
         const side = screenX < 0 ? -1 : 1;
         leaf.home.x = side * (TITLE_ZONE.x + marginX + 0.03 + Math.abs(screenX) * 0.4) * toScreenX;
       } else {
-        // 直式畫面：標題幾乎和畫面一樣寬，改成往標題上方或下方移
-        const above = leaf.v > 0.45;
-        const y = above ? TITLE_ZONE.top + marginY + 0.04 + 0.2 * leaf.v : TITLE_ZONE.bottom - marginY - 0.04 - 0.2 * leaf.v;
-        leaf.home.y = Math.max(cameraBase.y + y * toScreenY, 0.45);
+        // 直式畫面：標題幾乎和畫面一樣寬，改成往上移到標題上方的林間（直式畫面上半部本來就空）
+        const y = TITLE_ZONE.top + marginY + 0.04 + 0.55 * leaf.v;
+        leaf.home.y = cameraBase.y + Math.min(y, 0.85) * toScreenY;
       }
       screenX = leaf.home.x / toScreenX;
       screenY = (leaf.home.y - cameraBase.y) / toScreenY;

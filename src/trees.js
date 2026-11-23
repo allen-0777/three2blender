@@ -132,7 +132,7 @@ function createFoliageMaterial() {
     roughness: 0.95,
     side: THREE.DoubleSide,
   });
-  const transmission = leafTransmission({ transmit: 1.25, forward: 3.2, shadowKeep: 0.92, layers: 0.14 });
+  const transmission = leafTransmission({ transmit: 1.6, forward: 3.2, shadowKeep: 0.94, layers: 0.09 });
   material.onBeforeCompile = (shader) => {
     transmission(shader);
     shader.uniforms.uCanopySun = { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) };
@@ -445,9 +445,19 @@ export function forestLayout() {
 
 /** 沿中央小徑兩側決定每棵樹的位置、旋轉與大小 */
 function layoutTrees(rng) {
+  const leanRng = createRng(FOREST_SEED * 7919);
   const placements = [];
   const place = (x, z) =>
-    placements.push({ x, z, rotation: rng() * Math.PI * 2, scale: range(rng, 0.95, 1.45) });
+    placements.push({
+      x,
+      z,
+      rotation: rng() * Math.PI * 2,
+      scale: range(rng, 0.95, 1.45),
+      // 每棵樹微微歪向不同方向，打破整排複製的果園感。
+      // 用另一組亂數：位置與大小維持原本的配置（太陽藏在左前方那棵樹的樹冠後面）
+      leanX: range(leanRng, -0.07, 0.07),
+      leanZ: range(leanRng, -0.07, 0.07),
+    });
 
   // 緊鄰小徑的兩排
   for (let z = 7; z > -58; z -= 4.2) {
@@ -470,7 +480,7 @@ function createInstances(geometry, material, placements, tint) {
   placements.forEach((p, i) => {
     // 根部略沉進地表，避免緩坡上露出樹幹底面
     dummy.position.set(p.x, groundHeight(p.x, p.z) - 0.06, p.z);
-    dummy.rotation.y = p.rotation;
+    dummy.rotation.set(p.leanX ?? 0, p.rotation, p.leanZ ?? 0);
     dummy.scale.setScalar(p.scale);
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);

@@ -497,7 +497,7 @@ export function createPost(renderer, { sunDirection }) {
     renderer.setClearColor(savedClear, savedAlpha);
     camera.layers.mask = layers;
     const spread = Math.max(1, foregroundTarget.height / 450);
-    for (const scale of [1, 1.5]) {
+    for (const scale of [0.7, 1.1]) {
       blur(foregroundTarget, foregroundTemp, (scale * spread) / foregroundTarget.width, 0);
       blur(foregroundTemp, foregroundTarget, 0, (scale * spread) / foregroundTarget.height);
     }

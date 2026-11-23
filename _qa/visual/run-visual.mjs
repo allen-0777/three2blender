@@ -90,7 +90,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const info = await visual(page);
   const stats = await frameStats(page);
   report('桌面 high', info, stats);
-  check('high：後期管線啟用，DOF／glow／光柱皆開', info.supported && info.dof && info.glow && info.rays);
+  check('high：後期管線啟用，DOF／glow／完整體積光柱皆開', info.supported && info.dof && info.glow && info.rays === 'full');
   check('high：backing store = CSS 尺寸 × pixel ratio（2×）', info.canvas[0] === info.css[0] * 2 && info.canvas[1] === info.css[1] * 2 && info.scene[0] === info.canvas[0], `${info.canvas} / ${info.css}`);
   check('high：鏡頭 35 mm（36 mm 16:9 片門 → 垂直視角 32.3°）', Math.abs(info.lens.focalLength - 35) < 0.01 && Math.abs(info.lens.fov - 32.27) < 0.05);
   check('high：對焦在許願葉深度（7–26 m 之間）', info.lens.focus > 7 && info.lens.focus < 26, `${info.lens.focus.toFixed(2)} m`);
@@ -136,7 +136,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const { ctx, page } = await open(browser, 'mid', '?quality=mid');
   const info = await visual(page);
   report('桌面 mid', info, await frameStats(page));
-  check('mid：DOF 與光柱關閉、glow 保留、pixel ratio ≤ 1.5', !info.dof && !info.rays && info.glow && info.pixelRatio <= 1.5);
+  check('mid：DOF 關閉、glow 保留、簡化光柱（lite）、pixel ratio ≤ 1.5', !info.dof && info.rays === 'lite' && info.glow && info.pixelRatio <= 1.5);
   await shot(page, '04-desktop-dof-off-or-mid.png');
   await ctx.close();
 }
@@ -188,7 +188,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const { ctx, page } = await open(browser, 'low', '?quality=low');
   const info = await visual(page);
   report('桌面 low', info, await frameStats(page));
-  check('low：只留 tone mapping，其餘後期關閉', info.supported && !info.dof && !info.glow && !info.rays);
+  check('low：只留 tone mapping（與前景層），其餘後期關閉', info.supported && !info.dof && !info.glow && !info.rays);
   await shot(page, '07-desktop-low.png');
   await ctx.close();
 }

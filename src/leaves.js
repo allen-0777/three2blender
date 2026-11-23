@@ -5,7 +5,7 @@ import { leafTransmission } from './leafShading.js';
 
 // 飄落範圍（世界座標）。zMax 離鏡頭（z = 12）留兩公尺以上，
 // 避免葉子貼著鏡頭飄過、在景深裡變成一大團色塊。
-const AREA = { xMin: -17, xMax: 17, zMin: -32, zMax: 9.5, top: 12 };
+const AREA = { xMin: -17, xMax: 17, zMin: -32, zMax: 7.5, top: 12 };
 const TAU = Math.PI * 2;
 
 // 五裂楓葉輪廓的右半邊（葉柄朝下，整體約 1 單位大），左半邊鏡射
@@ -117,11 +117,14 @@ function createLeafMaterial() {
 
 const leafMaterial = createLeafMaterial();
 
-function createLeafMesh(count, rng) {
+function createLeafMesh(count, rng, { muted = false } = {}) {
   const mesh = new THREE.InstancedMesh(bentLeafGeometry, leafMaterial, count);
   const color = new THREE.Color();
   for (let i = 0; i < count; i++) {
-    color.setHex(pickLeafHue(rng)).multiplyScalar(range(rng, 0.8, 1.1));
+    let hex = pickLeafHue(rng);
+    // 飄落的裝飾葉不用淡黃與黃綠，也稍暗一些：不要和發光的許願葉（暖黃系）搶戲或被誤認
+    if (muted) while (hex === 0xf0c234 || hex === 0xb9a83a || hex === 0xf29d24) hex = pickLeafHue(rng);
+    color.setHex(hex).multiplyScalar(range(rng, 0.8, 1.1) * (muted ? 0.8 : 1));
     mesh.setColorAt(i, color);
   }
   mesh.instanceColor.needsUpdate = true;
@@ -137,7 +140,7 @@ function createLeafMesh(count, rng) {
  * speedScale 用於 prefers-reduced-motion 時放慢。
  */
 export function createFallingLeaves({ count, rng, speedScale = 1 }) {
-  const mesh = createLeafMesh(count, rng);
+  const mesh = createLeafMesh(count, rng, { muted: true });
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
   const spawn = (leaf, y) => {

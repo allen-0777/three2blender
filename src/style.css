@@ -438,6 +438,15 @@ body {
   }
 }
 
+/* 卡片打開時標題淡出，不從卡片兩側露出筆畫 */
+.title {
+  transition: opacity 0.4s ease;
+}
+
+body:has(#wish-card-dialog[open]) .title {
+  opacity: 0;
+}
+
 /* 右下角的環境音開關：預設靜音（顯示斜線），按下才出聲 */
 .sound-toggle {
   position: fixed;

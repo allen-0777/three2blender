@@ -116,7 +116,7 @@ function createFloorMap(trees, litterSpots) {
         const s = t.scale;
         // 樹冠正下方的大範圍遮蔽 + 樹根附近的接觸陰影
         ao *= 1 - 0.5 * Math.exp(-d2 / (2 * (1.9 * s) ** 2));
-        ao *= 1 - 0.55 * Math.exp(-d2 / (2 * (0.55 * s) ** 2));
+        ao *= 1 - 0.7 * Math.exp(-d2 / (2 * (0.6 * s) ** 2));
         const lift = (CROWN_HEIGHT * s) / SUN_DIRECTION.y;
         const cx = x + SUN_DIRECTION.x * lift - t.x;
         const cz = z + SUN_DIRECTION.z * lift - t.z;
