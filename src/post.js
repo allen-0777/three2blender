@@ -159,7 +159,7 @@ const VOLUME_FRAGMENT = /* glsl */ `
     float n = beamNoise( q * 0.55 ) * 0.65 + beamNoise( q * 1.4 + 3.1 ) * 0.35;
     // 只在樹冠高度以下拉成光束；樹梢以上的開闊天空不做條紋（低角度的太陽會把它拉成橫紋）
     // 遠處（> 15 m）的條紋淡掉：低角度看出去會疊成橫向的色帶
-    float fade = max( smoothstep( 4.5, 8.0, p.y ), smoothstep( 15.0, 38.0, t ) );
+    float fade = max( smoothstep( 3.0, 6.0, p.y ), smoothstep( 10.0, 28.0, t ) );
     return mix( 0.08 + 2.0 * smoothstep( 0.45, 0.76, n ), 0.6, fade );
   }
   void main() {
@@ -334,7 +334,7 @@ export function createPost(renderer, { sunDirection }) {
     (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
 
   /** rays：'full'（high）、'lite'（mid 的簡化版）或 false */
-  const settings = { dof: true, glow: true, rays: 'full', msaa: 4, auxScale: 1 };
+  const settings = { dof: true, glow: true, rays: 'full', raysIntensity: 1, msaa: 4, auxScale: 1 };
   const look = { glow: 0.2, rays: 1, vignette: 0.42, threshold: 1.8, fStop: 1.4, maxCoc: 0.009, contrast: 1.18 };
   /** 太陽的平行光（陰影貼圖給體積光柱用），由 setSun() 指定 */
   let sunLight = null;
@@ -611,7 +611,7 @@ export function createPost(renderer, { sunDirection }) {
       compositeMaterial.uniforms.uForeground.value = showForeground ? 1 : 0;
 
       compositeMaterial.uniforms.uGlow.value = settings.glow ? look.glow : 0;
-      compositeMaterial.uniforms.uRays.value = rays ? look.rays * facing : 0;
+      compositeMaterial.uniforms.uRays.value = rays ? look.rays * settings.raysIntensity * facing : 0;
       compositeMaterial.uniforms.uVignette.value = look.vignette;
       compositeMaterial.uniforms.uContrast.value = look.contrast;
       draw(compositeMaterial, null);

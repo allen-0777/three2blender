@@ -153,6 +153,7 @@ function applyTier() {
     dof: tier.dof && dofAllowed,
     glow: tier.glow,
     rays: tier.rays,
+    raysIntensity: tier.raysIntensity ?? 1,
     // 2× 以上已是超取樣，MSAA 用 2 就夠；1× 螢幕用 4
     msaa: currentPixelRatio() >= 1.75 ? 2 : 4,
     auxScale,

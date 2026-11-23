@@ -156,7 +156,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   await sleep(1000);
   const info = await visual(page);
   report('手機模擬（CPU 4× 降速）', info, await frameStats(page));
-  check('手機：自動選 low、DOF／glow／光柱關閉、pixel ratio ≤ 1.5', info.tier === 'low' && !info.dof && !info.glow && !info.rays && info.pixelRatio <= 1.5);
+  check('手機：自動選 low、DOF／glow 關閉、簡化光柱（lite）、pixel ratio ≤ 1.5', info.tier === 'low' && !info.dof && !info.glow && info.rays === 'lite' && info.pixelRatio <= 1.5);
   check('手機：後期仍做 tone mapping（管線啟用）', info.supported);
   await shot(page, '05-mobile-default.png');
 
@@ -188,7 +188,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const { ctx, page } = await open(browser, 'low', '?quality=low');
   const info = await visual(page);
   report('桌面 low', info, await frameStats(page));
-  check('low：只留 tone mapping（與前景層），其餘後期關閉', info.supported && !info.dof && !info.glow && !info.rays);
+  check('low：DOF／glow 關閉，只留簡化光柱、前景層與 tone mapping', info.supported && !info.dof && !info.glow && info.rays === 'lite');
   await shot(page, '07-desktop-low.png');
   await ctx.close();
 }

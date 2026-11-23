@@ -52,9 +52,11 @@ body {
   pointer-events: none;
   text-align: center;
   color: #fff6e6;
+  /* 背景可能是亮霧也可能是紅色樹冠：一圈較寬的暗影讓標題在任何鏡位都讀得清楚 */
   text-shadow:
-    0 2px 18px rgba(90, 25, 5, 0.55),
-    0 0 2px rgba(90, 25, 5, 0.4);
+    0 2px 18px rgba(60, 16, 3, 0.7),
+    0 0 40px rgba(50, 12, 2, 0.45),
+    0 0 2px rgba(60, 16, 3, 0.6);
   animation: rise 2.4s ease-out both;
 }
 
