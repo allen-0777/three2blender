@@ -118,7 +118,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000 } = {})
       points.push(new THREE.Vector3(x, groundHeight2(x, z) + 0.5 * (1 - t) - 0.25 * t * t, z));
     }
     const r0 = range(rng, 0.8, 1.1);
-    wood.push(tube(new THREE.CatmullRomCurve3(points), (u) => r0 * (1 - 0.85 * u) + 0.04, { segments: 14, sides: 10 }));
+    wood.push(tube(new THREE.CatmullRomCurve3(points), (u) => r0 * (1 - 0.85 * u) + 0.04, { segments: 20, sides: 16, bumps: 0.1, bumpSeed: a }));
   }
 
   // 大枝：往左右兩側與後方展開（朝鏡頭的方向少一點，樹幹才露得出來）

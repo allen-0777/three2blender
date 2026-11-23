@@ -376,7 +376,9 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       leaf.emphasis += (targetEmphasis - leaf.emphasis) * ease;
       const appear = leaf.arrive === 'fall' ? Math.min(t * 12, 1) : settled;
       // 被點開的那片在卡片後面略縮小，不從卡片兩側露出葉尖（焦點仍然跟著它）
-      leaf.scaleNow = leaf.size * fit * appear * (1 - leaf.emphasis * 0.45);
+      // 鏡頭貼得很近時（驗收用的近景鏡位）縮小，不會變成蓋住半個畫面的過曝光團；首頁鏡位最近也有 5 公尺，不受影響
+      const near = THREE.MathUtils.smoothstep(dummy.position.copy(leaf.position).distanceTo(camera.position), 1.5, 3.5);
+      leaf.scaleNow = leaf.size * fit * appear * (1 - leaf.emphasis * 0.45) * near;
 
       dummy.position.copy(leaf.position);
       dummy.rotation.set(

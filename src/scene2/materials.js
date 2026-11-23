@@ -27,7 +27,7 @@ export const LANTERN_GLSL = /* glsl */ `
       float dist2 = dot( d, d );
       float facing = 0.35 + 0.65 * max( dot( n, d * inversesqrt( dist2 + 1e-4 ) ), 0.0 );
       // 平方反比，近處壓住不要爆掉；4 公尺外很快淡掉
-      float falloff = 1.0 / ( 1.0 + dist2 * 2.2 ) * ( 1.0 - smoothstep( 6.0, 26.0, dist2 ) );
+      float falloff = 1.0 / ( 1.0 + dist2 * 1.3 ) * ( 1.0 - smoothstep( 9.0, 40.0, dist2 ) );
       sum += uLanternColor * l.w * falloff * facing;
     }
     return min( sum, vec3( 2.5 ) );

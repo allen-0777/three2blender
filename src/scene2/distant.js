@@ -43,12 +43,12 @@ export function createDistantForest(rng, count = 170) {
     const y = groundHeight2(x, z);
     const s = range(rng, 2.6, 4.6);
     const h = s * range(rng, 0.9, 1.3);
-    dummy.position.set(x, y + h + s * 0.5, z);
+    dummy.position.set(x, y + s * 0.75, z);
     dummy.rotation.set(0, rng() * Math.PI * 2, 0);
     dummy.scale.set(s * range(rng, 1.0, 1.4), s * range(rng, 0.7, 1.0), s * range(rng, 1.0, 1.4));
     dummy.updateMatrix();
     crowns.setMatrixAt(i, dummy.matrix);
-    color.setHex(hues[Math.floor(rng() * hues.length)]).multiplyScalar(range(rng, 0.55, 0.9));
+    color.setHex(hues[Math.floor(rng() * hues.length)]).multiplyScalar(range(rng, 0.4, 0.7));
     crowns.setColorAt(i, color);
     dummy.position.set(x, y - 0.2, z);
     dummy.scale.set(s * 0.25, h + s * 0.5, s * 0.25);
@@ -61,6 +61,8 @@ export function createDistantForest(rng, count = 170) {
     m.receiveShadow = true;
   }
   crowns.instanceColor.needsUpdate = true;
-  group.add(crowns, trunks);
+  // 樹幹不畫：在霧裡會變成一排沒有樹冠的細桿（盲審第 3 輪）
+  trunks.visible = false;
+  group.add(crowns);
   return group;
 }

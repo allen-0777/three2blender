@@ -86,7 +86,7 @@ function pad(center, radius, rng) {
  * 輸出的屬性與楓樹冠相同（position、normal、color、aAo、aCrown），共用樹冠材質（透光、AO）。
  */
 function needleTufts(center, radius, rng, out) {
-  const count = Math.round(70 * radius * radius + 24);
+  const count = Math.round(110 * radius * radius + 40);
   const n = new THREE.Vector3();
   const tip = new THREE.Vector3();
   const right = new THREE.Vector3();
@@ -97,8 +97,9 @@ function needleTufts(center, radius, rng, out) {
     const d = Math.sqrt(rng()) * radius * 1.02;
     const edge = d / radius;
     // 上表面是圓頂，邊緣往下垂一點
-    c.set(center.x + Math.cos(a) * d, center.y + (1 - edge * edge) * radius * 0.32 + range(rng, -0.08, 0.12) - edge * 0.12, center.z + Math.sin(a) * d);
-    n.set(Math.cos(a) * edge * 0.8 + range(rng, -0.3, 0.3), 1.0, Math.sin(a) * edge * 0.8 + range(rng, -0.3, 0.3)).normalize();
+    c.set(center.x + Math.cos(a) * d, center.y + (1 - edge * edge) * radius * 0.38 + range(rng, -0.22, 0.2) - edge * 0.1, center.z + Math.sin(a) * d);
+    // 朝向分散：有的朝上、有的朝外、有的斜向鏡頭，從低角度看過去才是一簇簇針葉，不是一片圓盤
+    n.set(Math.cos(a) * (0.4 + edge) + range(rng, -0.8, 0.8), range(rng, 0.1, 1.0), Math.sin(a) * (0.4 + edge) + range(rng, -0.8, 0.8)).normalize();
     tip.set(range(rng, -1, 1), 0, range(rng, -1, 1)).addScaledVector(n, -0.0);
     tip.addScaledVector(n, -tip.dot(n));
     if (tip.lengthSq() < 1e-4) tip.set(1, 0, 0);
@@ -154,18 +155,18 @@ function buildPine(rng, height, needles) {
     const radius = (1 - t) * 1.4 + range(rng, 0.5, 0.75);
     const padCenter = end.clone().add(new THREE.Vector3(0, 0.15, 0));
     // 暗色的實心核心（填滿針葉簇之間的縫）＋ 外層的針葉簇
-    parts.push(pad(padCenter, radius * 0.78, rng));
+    parts.push(pad(padCenter, radius * 0.55, rng));
     needleTufts(padCenter, radius, rng, needles);
     if (rng() < 0.6) {
       const second = start.clone().lerp(end, 0.45).add(new THREE.Vector3(0, 0.3, 0));
-      parts.push(pad(second, radius * 0.5, rng));
+      parts.push(pad(second, radius * 0.36, rng));
       needleTufts(second, radius * 0.62, rng, needles);
     }
   }
   // 樹頂
   const crownTop = trunk.getPointAt(1).add(new THREE.Vector3(0, 0.2, 0));
   const topRadius = range(rng, 0.8, 1.1);
-  parts.push(pad(crownTop, topRadius * 0.78, rng));
+  parts.push(pad(crownTop, topRadius * 0.55, rng));
   needleTufts(crownTop, topRadius, rng, needles);
   return mergeGeometries(parts);
 }

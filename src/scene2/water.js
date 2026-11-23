@@ -33,6 +33,7 @@ const FRAGMENT = /* glsl */ `
   uniform vec3 uSunColorW;
   uniform vec3 uBody;
   uniform vec3 uSkyFallback;
+  uniform vec3 uSkyTint;
   uniform float uGlitter;
   #include <common>
   #include <fog_pars_fragment>
@@ -48,7 +49,7 @@ const FRAGMENT = /* glsl */ `
       float a = fi * 1.7 + 0.4;
       vec2 d = normalize( vec2( cos( a ) + 1.4, sin( a ) ) );
       float k = 2.2 + fi * 1.55;
-      float amp = 0.005 / ( 1.0 + fi * 0.8 );
+      float amp = 0.0032 / ( 1.0 + fi * 0.8 );
       float phase = dot( d, p ) * k - t * ( 0.8 + fi * 0.35 ) + fi * 2.1;
       g += d * k * amp * cos( phase );
     }
@@ -69,13 +70,13 @@ const FRAGMENT = /* glsl */ `
     vec3 reflected;
     if ( uHasEnv > 0.5 ) {
       // 波紋越碎反射越糊：用 mip bias 模擬
-      reflected = texture( tEnv, R, 2.2 ).rgb;
+      reflected = texture( tEnv, R, 3.0 ).rgb;
     } else {
       // 沒有 cube map（手機）：低角度反射的是對岸的樹林（uSkyFallback），往上才是天空與霧
       // 暗色的倒影（對岸樹林）為底，只有遠處的水面帶一點天空色；細碎的波光讓水和地面分得開
-      float farSky = smoothstep( 8.0, 30.0, dist );
-      reflected = mix( uSkyFallback, mapleHaze( normalize( vec3( R.x, max( R.y, 0.05 ), R.z ) ) ) * 0.7, farSky * 0.6 );
-      reflected += mapleHaze( vec3( 0.0, 0.1, -1.0 ) ) * smoothstep( 0.006, 0.014, length( slope ) ) * 0.35;
+      // 天空色的漸層為底（離鏡頭越遠、越接近水平越亮），近岸帶一點對岸樹林的暗色倒影
+      float farSky = smoothstep( 6.0, 28.0, dist );
+      reflected = mix( uSkyFallback, uSkyTint, 0.45 + 0.5 * farSky );
     }
     reflected = min( reflected, vec3( 1.6 ) );
     float fresnel = 0.02 + 0.98 * pow( 1.0 - max( dot( N, V ), 0.0 ), 5.0 );
@@ -198,6 +199,7 @@ export function createWater({ envSize = 256, leafCount = 60, mirrorFrom = new TH
     uSunColorW: { value: new THREE.Color(1, 0.8, 0.6) },
     uBody: { value: new THREE.Color(0.02, 0.025, 0.02) },
     uSkyFallback: { value: new THREE.Color(0.4, 0.5, 0.7) },
+    uSkyTint: { value: new THREE.Color(0.3, 0.4, 0.55) },
     uGlitter: { value: 1 },
   };
   const material = new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: FRAGMENT, uniforms, fog: true });
@@ -232,9 +234,10 @@ export function createWater({ envSize = 256, leafCount = 60, mirrorFrom = new TH
       uniforms.uSunColorW.value.copy(color);
       uniforms.uGlitter.value = glitter;
     },
-    setBody(color, skyFallback) {
+    setBody(color, skyFallback, skyTint) {
       uniforms.uBody.value.copy(color);
       if (skyFallback) uniforms.uSkyFallback.value.copy(skyFallback);
+      if (skyTint) uniforms.uSkyTint.value.copy(skyTint);
     },
     setLeafCount(n) {
       floating.mesh.count = Math.min(leafCount, n);

@@ -43,7 +43,7 @@ const weighted = (list) => {
 const FIXED = [
   { x: 8.8, z: -2.0, species: 'pine', height: 8.5 },
   { x: -5.9, z: -9.5, species: 'pine', height: 7.2 },
-  { x: 12.5, z: -17, species: 'pine', height: 7 },
+  { x: 9.6, z: -15.5, species: 'pine', height: 7.5 },
   { x: -15, z: -24, species: 'pine', height: 7 },
   { x: 7.2, z: -11.5, species: 'ginkgo' },
   { x: 13.5, z: 1.5, species: 'ginkgo' },
@@ -229,7 +229,7 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
     u.uStars.value = p.stars;
     lanterns.setLevel(p.lanterns);
     water.setSun(sunDirection, color.setRGB(...p.sunColor).multiplyScalar(p.sunIntensity * 0.25), p.water.glitter);
-    water.setBody(color.setRGB(...p.water.body), new THREE.Color().setRGB(...p.water.fallback));
+    water.setBody(color.setRGB(...p.water.body), new THREE.Color().setRGB(...p.water.fallback), new THREE.Color().setRGB(...p.water.sky));
     sparkles.setSunDirection(sunDirection);
     sparkles.setLevels(...p.sparkles);
     uplight.intensity = p.uplight;
