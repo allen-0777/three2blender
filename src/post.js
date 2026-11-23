@@ -351,7 +351,7 @@ export function createPost(renderer, { sunDirection }) {
   // 光柱：raysTemp 放原始結果，raysTarget 放橫向模糊，縱向模糊再寫回 raysTemp 給合成用
   const raysTarget = createTarget();
   const raysTemp = createTarget();
-  // 前景層：鏡頭前很近的物件（前景樹枝）單獨畫在 1/4 解析度、透明底的 buffer，再用高斯模糊成柔和的剪影。
+  // 前景層：鏡頭前很近的物件（前景樹枝）單獨畫在 1/2 解析度、透明底的 buffer，再用高斯模糊成柔和的剪影。
   // 這種距離的模糊圈遠超過景深 pass 的上限，直接交給景深會有階梯狀的邊緣。
   const foregroundTarget = createTarget();
   const foregroundTemp = createTarget();
@@ -464,7 +464,7 @@ export function createPost(renderer, { sunDirection }) {
     raysTarget.setSize(even((width / raysDivisor) * aux), even((height / raysDivisor) * aux));
     raysTemp.setSize(raysTarget.width, raysTarget.height);
     compositeMaterial.uniforms.uRaysTexel.value.set(1 / raysTarget.width, 1 / raysTarget.height);
-    foregroundTarget.setSize(even(width / 4), even(height / 4));
+    foregroundTarget.setSize(even(width / 2), even(height / 2));
     foregroundTemp.setSize(foregroundTarget.width, foregroundTarget.height);
 
     bokehMaterial.uniforms.uTexel.value.set(1 / cocTarget.width, 1 / cocTarget.height);
