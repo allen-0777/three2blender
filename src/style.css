@@ -624,7 +624,7 @@ body:has(#wish-card-dialog[open]) .title > * {
   z-index: 3;
   display: grid;
   place-items: center;
-  background: #140904;
+  background: radial-gradient(ellipse at 40% 35%, #a38b72 0%, #655448 60%, #3b302b 100%);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--fade-ms, 650ms) ease;
@@ -643,8 +643,8 @@ body:has(#wish-card-dialog[open]) .title > * {
   content: attr(data-label);
   color: rgba(255, 236, 210, 0.7);
   font-family: var(--wish-serif);
-  font-size: 0.95rem;
-  letter-spacing: 0.3em;
+  font-size: 0.8rem;
+  letter-spacing: 0.22em;
 }
 
 /* 場景二夜晚：頁面底色（載入前、畫面邊緣）跟著變深 */

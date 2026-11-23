@@ -5,7 +5,7 @@
 
 const STORAGE = { scene: 'maple-season:scene', time: 'maple-season:time' };
 const TIMES = ['afternoon', 'dusk', 'night'];
-const FADE_MS = 650;
+const FADE_MS = 700;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const frames = (n) =>
@@ -51,6 +51,7 @@ export function createSceneSwitch({ root, fade, initial, load, activate, setTime
   let time = initial.time;
   let busy = null;
   const fadeMs = reducedMotion ? 200 : FADE_MS;
+  const revealMs = reducedMotion ? 200 : 900;
   fade.style.setProperty('--fade-ms', `${fadeMs}ms`);
 
   function syncButtons() {
@@ -63,14 +64,20 @@ export function createSceneSwitch({ root, fade, initial, load, activate, setTime
 
   /** 淡出 → 做事 → 等幾幀（shader 編譯、陰影、倒影）→ 淡入 */
   async function transition(work, { label = '' } = {}) {
+    fade.style.setProperty('--fade-ms', `${fadeMs}ms`);
     fade.dataset.label = label;
+    root.setAttribute('aria-busy', 'true');
     fade.classList.add('is-on');
+    await frames(2);
     await wait(fadeMs);
     try {
       await work();
     } finally {
       await frames(3);
+      fade.style.setProperty('--fade-ms', `${revealMs}ms`);
       fade.classList.remove('is-on');
+      await wait(revealMs);
+      root.removeAttribute('aria-busy');
     }
   }
 
@@ -96,7 +103,7 @@ export function createSceneSwitch({ root, fade, initial, load, activate, setTime
           activate(scene, time);
           syncButtons();
         },
-        { label: next === 2 ? '前往神木小溪…' : '' },
+        { label: next === 2 ? '前往神木小溪…' : '回到楓林…' },
       );
       if (remember) writeStorage(STORAGE.scene, String(next));
     });
@@ -124,20 +131,7 @@ export function createSceneSwitch({ root, fade, initial, load, activate, setTime
 
   syncButtons();
   // 開場就是場景二：畫面先蓋著，載入好再淡入
-  const ready =
-    initial.scene === 2
-      ? (async () => {
-          fade.classList.add('is-on', 'is-instant');
-          fade.dataset.label = '前往神木小溪…';
-          await load(2);
-          scene = 2;
-          activate(2, time);
-          syncButtons();
-          await frames(3);
-          fade.classList.remove('is-instant');
-          fade.classList.remove('is-on');
-        })()
-      : Promise.resolve();
+  const ready = initial.scene === 2 ? switchTo(2, { remember: false }) : Promise.resolve();
 
   return {
     ready,

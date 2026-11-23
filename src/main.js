@@ -205,8 +205,16 @@ let activeIndex = 1;
 // 切換場景、換時段後的幾秒不計入幀時間（shader 編譯與倒影重拍的長幀）
 let frameWatchHold = 0;
 
-async function loadScene(index) {
-  if (index !== 2 || sceneTwo) return;
+let sceneTwoLoading = null;
+function loadScene(index) {
+  if (index !== 2 || sceneTwo) return Promise.resolve();
+  return sceneTwoLoading ??= buildSceneTwo().catch((error) => {
+    sceneTwoLoading = null;
+    throw error;
+  });
+}
+
+async function buildSceneTwo() {
   const { createSceneTwo } = await import('./scene2/index.js');
   const two = await createSceneTwo({
     renderer,
@@ -225,6 +233,7 @@ async function loadScene(index) {
   });
   two.applyTier(tier);
   two.setTime(switcher?.time ?? choice.time);
+  setAtmosphere(FOREST_ATMOSPHERE);
   // 先在背景把 shader 編好，淡入時不會卡一下
   await renderer.compileAsync(two.scene, camera).catch(() => {});
   setAtmosphere(FOREST_ATMOSPHERE); // setTime 改了共用的大氣；還沒切過去前維持場景一
@@ -279,6 +288,19 @@ const switcher = createSceneSwitch({
   activate: activateScene,
   setTime: (time) => sceneTwo && applySceneTwoTime(time),
 });
+// 首頁穩定後閒置預載；低畫質只預取模組，避免手機多一份場景記憶體。
+if (choice.scene === 1) {
+  setTimeout(() => {
+    const warm = () => {
+      if (document.hidden || switcher.busy) return;
+      frameWatchHold = performance.now() + 10000;
+      const task = tierName === 'low' ? import('./scene2/index.js') : loadScene(2);
+      task.catch((error) => console.warn('場景預載未完成，切換時重試', error));
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(warm, { timeout: 5000 });
+    else setTimeout(warm, 1000);
+  }, 4500);
+}
 window.__scenes = {
   get current() {
     return activeIndex;
