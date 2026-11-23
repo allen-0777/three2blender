@@ -61,8 +61,8 @@ export const TIMES = {
     // 月亮在神木樹冠右側的空隙裡（index.js 在這個方向不種楓樹）
     sun: direction(19.5, 13.5),
     sunColor: [0.55, 0.68, 1.0],
-    sunIntensity: 1.15,
-    hemi: { sky: [0.28, 0.36, 0.62], ground: [0.05, 0.04, 0.05], intensity: 0.32 },
+    sunIntensity: 1.4,
+    hemi: { sky: [0.22, 0.32, 0.62], ground: [0.03, 0.03, 0.05], intensity: 0.26 },
     fill: { color: [0.4, 0.5, 0.85], intensity: 0.07 },
     atmosphere: { haze: [0.014, 0.022, 0.055], hazeSun: [0.06, 0.09, 0.2], falloff: 0.2, farStart: 55, farEnd: 110 },
     fogDensity: 0.0026,
@@ -75,7 +75,7 @@ export const TIMES = {
     // 夜晚：灰塵幾乎關掉（月光下會變成像下雪的白點），金色光點像少量螢火
     sparkles: [0.05, 0.45],
     // 燈籠與許願葉的暖光從下方照亮樹冠（概念圖 C 的紅色樹冠）
-    uplight: 0.9,
+    uplight: 0.5,
     lanterns: 1.6,
     wishGlow: 1.45,
     water: { body: [0.006, 0.008, 0.014], fallback: [0.006, 0.008, 0.018], sky: [0.04, 0.06, 0.13], glitter: 0.8 },

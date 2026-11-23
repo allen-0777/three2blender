@@ -43,7 +43,7 @@ const weighted = (list) => {
 const FIXED = [
   { x: 8.8, z: -2.0, species: 'pine', height: 8.5 },
   { x: -5.9, z: -9.5, species: 'pine', height: 7.2 },
-  { x: 9.6, z: -15.5, species: 'pine', height: 7.5 },
+  { x: 11, z: -12, species: 'pine', height: 7.5 },
   { x: -15, z: -24, species: 'pine', height: 7 },
   { x: 7.2, z: -11.5, species: 'ginkgo' },
   { x: 13.5, z: 1.5, species: 'ginkgo' },
