@@ -68,6 +68,8 @@ export function initWishWall({ canvas, camera, wishLeaves }) {
       lastId = Math.max(lastId, wish.id);
       wishLeaves.add(wish, typeof options === 'function' ? options(i) : options);
     });
+    // 標題範圍可能在第一次 add 之後才量好（字體載入／首幀 lookAt），再排一次位置
+    if (wishes.length) wishLeaves.layout();
   }
 
   async function refresh() {

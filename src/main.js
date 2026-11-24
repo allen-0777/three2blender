@@ -57,6 +57,7 @@ const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 400);
 const CAMERA_BASE = new THREE.Vector3(0, 1.9, 12);
 const LOOK_AT = new THREE.Vector3(0, 2.7, -10);
 camera.position.copy(CAMERA_BASE);
+camera.lookAt(LOOK_AT);
 
 // 開場的檔次決定貼圖解析度與陰影圖大小；之後降級只關效果、減份量，不重新載入貼圖
 const rng = createRng(20261121);
@@ -177,6 +178,8 @@ function applyTier() {
 }
 applyTier();
 window.addEventListener('resize', resize);
+if (document.fonts?.ready) document.fonts.ready.then(() => resize()).catch(() => {});
+
 
 // 幀時間太長時依序：輔助 pass 減半 → 降一檔 → 主畫面解析度降到 1×
 function degrade(averageMs) {
@@ -384,10 +387,13 @@ const DOLLY_DISTANCE = 1.8;
 let dollyClock = 0;
 const lookTarget = new THREE.Vector3();
 const drawingSize = new THREE.Vector2();
-let previous = performance.now();
+let previous = null;
 let frame = 0;
 let pendingDt = 0;
 renderer.setAnimationLoop((now) => {
+  // 只用 rAF 的 now，不要跟 performance.now() 混用：兩者時間原點不一致時
+  // elapsed 會是負的，許願葉內部時鐘倒退，appear 一直是 0、葉子縮成看不見。
+  if (previous === null) previous = now;
   const elapsed = now - previous;
   previous = now;
   frame += 1;
@@ -397,7 +403,7 @@ renderer.setAnimationLoop((now) => {
   if (!initial.forced && !formDialog.open && !switcher.busy && now > frameWatchHold) frameWatch.sample(elapsed);
 
   // 分頁切回來時避免一次跳一大步
-  const dt = Math.min(pendingDt / 1000, 0.05);
+  const dt = Math.max(0, Math.min(pendingDt / 1000, 0.05));
   pendingDt = 0;
   const time = now / 1000;
 

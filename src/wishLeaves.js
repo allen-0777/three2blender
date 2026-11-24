@@ -246,6 +246,43 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     if (keepOut && screenX * (keepOut.side ?? 1) > keepOut.x - 0.08 && screenY > keepOut.y - 0.12) {
       leaf.home.y = cameraBase.y + (keepOut.y - 0.12 - 0.25 * leaf.v) * toScreenY;
     }
+    // 上面的畫面座標是假設鏡頭沿 -Z 看，但實際鏡頭會略往上看（LOOK_AT 比鏡頭高），
+    // 葉子的真正投影會再往下移，容易剛好壓在「楓葉季」標題上。用真實投影再推一次。
+    avoidTitleProjection(leaf, toScreenX, toScreenY);
+  }
+
+  const projected = new THREE.Vector3();
+  function inTitle(sx, sy, marginX, marginY) {
+    return (
+      Math.abs(sx) < TITLE_ZONE.x + marginX &&
+      sy > TITLE_ZONE.bottom - marginY &&
+      sy < TITLE_ZONE.top + marginY
+    );
+  }
+  function avoidTitleProjection(leaf, toScreenX, toScreenY) {
+    camera.updateMatrixWorld();
+    const marginX = (leaf.driftX * 1.1) / Math.max(toScreenX, 1e-4);
+    const marginY = (leaf.driftY * 1.1) / Math.max(toScreenY, 1e-4);
+    for (let step = 0; step < 6; step += 1) {
+      projected.copy(leaf.home).project(camera);
+      if (!inTitle(projected.x, projected.y, marginX, marginY)) break;
+      if (leaf.featured) {
+        const targetY = TITLE_ZONE.bottom - marginY - 0.06;
+        leaf.home.y += (targetY - projected.y) * toScreenY;
+      } else if (camera.aspect < 0.85 || TITLE_ZONE.x + marginX >= 0.55) {
+        // 直式或標題很寬：改放到標題上方，或標題與按鈕之間
+        const above = leaf.v > 0.55;
+        const targetY = above
+          ? Math.min(TITLE_ZONE.top + marginY + 0.14 + 0.2 * leaf.v, 0.82)
+          : TITLE_ZONE.bottom - marginY - 0.1 - 0.15 * leaf.v;
+        leaf.home.y += (targetY - projected.y) * toScreenY;
+        leaf.home.y = Math.max(leaf.home.y, 0.6);
+      } else {
+        const side = projected.x < 0 ? -1 : 1;
+        const targetX = side * (TITLE_ZONE.x + marginX + 0.08);
+        leaf.home.x += (targetX - projected.x) * toScreenX;
+      }
+    }
   }
 
   const glowLevel = new THREE.Color();
