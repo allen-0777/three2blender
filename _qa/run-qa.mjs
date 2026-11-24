@@ -51,6 +51,7 @@ watch(page, 'desktop');
 await page.goto(base, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__wishWall?.leaves.size > 0);
 await sleep(5000);
+await page.waitForFunction(() => window.__visual.title.settled);
 const initial = await state(page);
 const serverCount = (await (await fetch(`${base}/api/wishes/count`)).json()).count;
 check('桌機：場景載入，許願楓葉數 = min(留言數, 100)', initial.leaves === Math.min(serverCount, 100), JSON.stringify(initial));
@@ -190,7 +191,27 @@ const phone = await mobile.newPage();
 watch(phone, 'mobile');
 await phone.goto(base, { waitUntil: 'load' });
 await phone.waitForFunction(() => window.__wishWall?.leaves.size > 0);
+// Tap during the intro, before the hold timer expires.
+await sleep(600);
+const earlyTarget = await phone.evaluate(async () => {
+  const { wishes } = await (await fetch('/api/wishes?limit=100')).json();
+  return wishes.map((wish) => ({ ...wish, ...window.__wishWall.leaves.screenPosition(wish.id) }))
+    .find((p) => p.x > 30 && p.x < innerWidth - 30 && p.y > 100 && p.y < 640);
+});
+check('手機：提早觸控前仍在開場', await phone.evaluate(() => window.__visual.title.state === 'visible'));
+if (earlyTarget) {
+  const p = await leafPosition(phone, earlyTarget.id);
+  await phone.touchscreen.tap(p.x, p.y);
+  await phone.waitForFunction(() => window.__visual.title.state === 'dismissed');
+  check('手機：開場觸控開卡片並延後葉子移動', (await card(phone)).open &&
+    await phone.evaluate(() => !window.__wishWall.leaves.moving && !window.__visual.title.settled));
+  await phone.keyboard.press('Escape');
+  await phone.waitForFunction(() => window.__visual.title.settled);
+  check('手機：關卡片後標題不回來', await phone.evaluate(() => window.__visual.title.state === 'dismissed'));
+} else check('手機：開場有可觸控的葉子', false);
+
 await sleep(5000);
+await phone.waitForFunction(() => window.__visual.title.settled);
 const mobileState = await state(phone);
 check('手機：場景載入、計數正確', mobileState.count === `已有 ${serverCount + 2} 片楓葉`, JSON.stringify(mobileState));
 const onScreen = await phone.evaluate(async () => {

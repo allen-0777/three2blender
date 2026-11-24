@@ -36,6 +36,7 @@ async function open(browser, label, query, context = {}) {
   await page.goto(`${base}/${query}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__wishWall?.leaves.size > 0);
   await sleep(5000);
+  await page.waitForFunction(() => window.__visual.title.settled);
   return { ctx, page };
 }
 
@@ -159,6 +160,23 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   check('手機：自動選 low、DOF／glow 關閉、簡化光柱（lite）、pixel ratio ≤ 1.5', info.tier === 'low' && !info.dof && !info.glow && info.rays === 'lite' && info.pixelRatio <= 1.5);
   check('手機：後期仍做 tone mapping（管線啟用）', info.supported);
   await shot(page, '05-mobile-default.png');
+  await shot(page, '10-mobile-dismissed.png');
+  check('手機：角落 logo 可由無障礙名稱找到', await page.getByRole('link', { name: '楓葉季 Maple Season' }).count() === 1);
+  check('手機：logo 觸控範圍、間距與葉子避讓', await page.evaluate(async () => {
+    const r = document.querySelector('.corner-logo').getBoundingClientRect();
+    const overlap = (b) => r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top;
+    const controls = ['.scene-switch', '.sound-toggle', '.wish-hint', '#wish-open'];
+    const { wishes } = await (await fetch('/api/wishes?limit=100')).json();
+    return r.width >= 44 && r.height >= 44 && r.left >= 12 && r.bottom <= innerHeight - 12 &&
+      controls.every((selector) => !overlap(document.querySelector(selector).getBoundingClientRect())) &&
+      wishes.every(({ id }) => {
+        const p = window.__wishWall.leaves.screenPosition(id);
+        return p && !(p.x > r.left - 12 && p.x < r.right + 12 && p.y > r.top - 12 && p.y < r.bottom + 12);
+      });
+  }));
+  check('手機：dismissed 後 h1 仍在無障礙樹',
+    await page.getByRole('heading', { level: 1, name: '楓葉季' }).count() === 1 &&
+    await page.locator('.title h1').evaluate((h) => getComputedStyle(h).display !== 'none' && !h.hasAttribute('aria-hidden')));
 
   await page.getByRole('button', { name: '留下你的楓葉' }).tap();
   await sleep(500);
@@ -225,6 +243,10 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const info = await visual(page);
   const state = await page.evaluate(() => ({ leaves: window.__wishWall.leaves.size }));
   check('減少動態：許願葉仍會浮現（不是空林子）', info.reducedMotion && state.leaves > 0, `${state.leaves} 片`);
+  check('減少動態：標題瞬間切換、葉子沒有 lerp', await page.evaluate(() =>
+    window.__visual.title.state === 'dismissed' && !window.__wishWall.leaves.moving &&
+    !document.documentElement.classList.contains('is-title-fading') &&
+    getComputedStyle(document.querySelector('.title h1')).transitionDuration === '0s'));
   // 鏡頭不漂移、不跟滑鼠：移動滑鼠後許願葉的「家」位置投影不應整體平移
   const sample = async () => page.evaluate(() => window.__visual.lens.focus);
   await page.mouse.move(100, 100);
@@ -233,6 +255,44 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   await sleep(600);
   check('減少動態：對焦穩定（無選取時不變動）', Math.abs((await sample()) - info.lens.focus) < 0.05);
   await shot(page, '09-desktop-reduced-motion.png');
+  await ctx.close();
+}
+
+// First Tab must reach the form button without dismissing the intro.
+{
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  watch(page, 'keyboard');
+  await page.goto(`${base}/?quality=low`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__visual);
+  await page.keyboard.press('Tab');
+  check('鍵盤：第一次 Tab 不關標題、不聚焦隱藏 logo', await page.evaluate(() =>
+    window.__visual.title.state === 'visible' && document.activeElement.id === 'wish-open'));
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__visual.title.state === 'dismissed');
+  check('鍵盤：Enter 開表單、延後葉子移動', await page.evaluate(() =>
+    document.getElementById('wish-form-dialog').open && !window.__wishWall.leaves.moving && !window.__visual.title.settled));
+  // A resize must not accidentally apply the deferred zones.
+  await page.setViewportSize({ width: 844, height: 390 });
+  check('對話框：resize 不提前套用避讓切換', await page.evaluate(() => !window.__visual.title.settled && !window.__wishWall.leaves.moving));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => window.__visual.title.settled);
+  check('對話框：關閉後標題不回來', await page.evaluate(() => window.__visual.title.state === 'dismissed'));
+  await ctx.close();
+}
+
+// Capture mode stays pinned after time and input.
+{
+  const { ctx, page } = await open(browser, 'capture', '?capture=1&quality=high');
+  await sleep(8000);
+  await page.mouse.click(6, 6);
+  await page.mouse.wheel(0, 100);
+  await page.keyboard.press('Enter');
+  check('capture：互動後仍保留標題與中央避讓', await page.evaluate(() =>
+    window.__visual.title.state === 'pinned' &&
+    getComputedStyle(document.querySelector('.corner-logo')).visibility === 'hidden' &&
+    getComputedStyle(document.querySelector('.title h1')).opacity === '1'));
+  await shot(page, '11-desktop-capture.png');
   await ctx.close();
 }
 

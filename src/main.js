@@ -1,3 +1,4 @@
+import { createTitleIntro } from './titleIntro.js';
 // 大氣模組會覆寫 three 的霧 shader chunk，必須在任何材質建立之前載入
 import { FOREST_ATMOSPHERE, setAtmosphere } from './atmosphere.js';
 import * as THREE from 'three';
@@ -26,6 +27,7 @@ THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fra
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
 const params = new URLSearchParams(window.location.search);
+const captureMode = params.get('capture') === '1';
 
 const initial = chooseInitialTier({ isSmallScreen });
 let tierName = initial.tier;
@@ -121,8 +123,12 @@ function currentPixelRatio() {
 
 // 標題在畫面上的實際範圍（含一點邊距），換算成畫面座標給許願葉避開
 // （.title 本身是滿版的置中容器，量的是裡面的標題文字）
+const formDialog = document.getElementById('wish-form-dialog');
+const cardDialog = document.getElementById('wish-card-dialog');
+const cornerLogo = document.querySelector('.corner-logo');
 const titleParts = [...document.querySelectorAll('.title > *')];
 function titleZone() {
+  if (!titleIntro.zoneActive) return null;
   const rects = titleParts.map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0);
   if (rects.length === 0) return null;
   const rect = {
@@ -153,10 +159,48 @@ function resize() {
   camera.updateProjectionMatrix();
   post.resize();
   framing.layout(camera);
-  const zone = titleZone();
-  if (zone) wishLeaves.setTitleZone(zone);
-  else wishLeaves.layout();
+  applyAvoidZones();
 }
+
+function cornerZone() {
+  if (titleIntro.state !== 'dismissed') return null;
+  const r = cornerLogo.getBoundingClientRect();
+  const pad = 12;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  return {
+    left: (r.left - pad) / w * 2 - 1,
+    right: (r.right + pad) / w * 2 - 1,
+    top: 1 - (r.top - pad) / h * 2,
+    bottom: 1 - (r.bottom + pad) / h * 2,
+  };
+}
+
+function applyAvoidZones({ animate = false } = {}) {
+  // Resize / quality changes must not release deferred zones behind an open dialog.
+  if (pendingZones && (formDialog.open || cardDialog.open)) return;
+  wishLeaves.setCornerZone(cornerZone());
+  wishLeaves.setTitleZone(titleZone(), { animate });
+}
+
+let pendingZones = false;
+const titleIntro = createTitleIntro({
+  root: document.documentElement,
+  title: document.querySelector('.title'),
+  logo: cornerLogo,
+  dialogs: [formDialog, cardDialog],
+  capture: captureMode,
+  reducedMotion,
+  onDismissed: ({ animate }) => {
+    if (formDialog.open || cardDialog.open) { pendingZones = true; return; }
+    applyAvoidZones({ animate });
+  },
+});
+for (const dialog of [formDialog, cardDialog]) dialog.addEventListener('close', () => {
+  if (!pendingZones || formDialog.open || cardDialog.open) return;
+  pendingZones = false;
+  applyAvoidZones({ animate: !reducedMotion });
+});
 
 function applyTier() {
   const dofAllowed = params.get('dof') !== '0';
@@ -331,6 +375,11 @@ window.__scenes = {
 // 給除錯與自動化驗收用
 window.__wishWall = { leaves: wishLeaves, ...wishWall };
 window.__visual = {
+  title: {
+    get state() { return titleIntro.state; },
+    get settled() { return (titleIntro.state === 'dismissed' || titleIntro.state === 'pinned') && !pendingZones && !wishLeaves.moving; },
+    dismiss: () => titleIntro.dismiss('qa'),
+  },
   get tier() {
     return tierName;
   },
@@ -356,7 +405,7 @@ window.__visual = {
       ? { position: new THREE.Vector3(...pose.position), target: new THREE.Vector3(...pose.target), focus: pose.focus ?? null }
       : null;
   },
-  info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, ...post.info() }),
+  info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, capture: captureMode, ...post.info() }),
   /** 除錯／效能量測用：直接切換後期效果（{ dof, glow, rays, auxScale }） */
   configure(next) {
     post.configure(next);
@@ -380,8 +429,7 @@ if (!reducedMotion) {
   });
 }
 
-const formDialog = document.getElementById('wish-form-dialog');
-const cardDialog = document.getElementById('wish-card-dialog');
+
 // 場景二的推軌：往前推的距離（公尺）與已經走過的時間
 const DOLLY_DISTANCE = 1.8;
 let dollyClock = 0;

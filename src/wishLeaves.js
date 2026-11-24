@@ -1,3 +1,5 @@
+const MOVE_DURATION = 1.0;
+const easeInOutCubic = (t) => t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
 import * as THREE from 'three';
 import { createRng, pick, range } from './palette.js';
 import { leafGeometry, LEAF_OUTLINE, LEAF_VEIN_BASE } from './leaves.js';
@@ -182,6 +184,7 @@ function createMeshes(capacity) {
  */
 export function createWishLeaves({ camera, cameraBase, reducedMotion = false, capacity = 140, keepOut = null }) {
   let TITLE_ZONE = { ...DEFAULT_TITLE_ZONE };
+  let CORNER_ZONE = null;
   const { body, edge, halo } = createMeshes(capacity);
   const group = new THREE.Group();
   group.add(body, edge, halo);
@@ -219,7 +222,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     // 停留時還會飄動（driftX／driftY 公尺），範圍再放寬這麼多
     const marginX = (leaf.driftX * 1.1) / toScreenX;
     const marginY = (leaf.driftY * 1.1) / toScreenY;
-    if (
+    if (TITLE_ZONE &&
       Math.abs(screenX) < TITLE_ZONE.x + marginX &&
       screenY > TITLE_ZONE.bottom - marginY &&
       screenY < TITLE_ZONE.top + marginY
@@ -249,10 +252,12 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     // 上面的畫面座標是假設鏡頭沿 -Z 看，但實際鏡頭會略往上看（LOOK_AT 比鏡頭高），
     // 葉子的真正投影會再往下移，容易剛好壓在「楓葉季」標題上。用真實投影再推一次。
     avoidTitleProjection(leaf, toScreenX, toScreenY);
+    avoidCornerProjection(leaf, toScreenX, toScreenY);
   }
 
   const projected = new THREE.Vector3();
   function inTitle(sx, sy, marginX, marginY) {
+    if (!TITLE_ZONE) return false;
     return (
       Math.abs(sx) < TITLE_ZONE.x + marginX &&
       sy > TITLE_ZONE.bottom - marginY &&
@@ -260,6 +265,7 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     );
   }
   function avoidTitleProjection(leaf, toScreenX, toScreenY) {
+    if (!TITLE_ZONE) return;
     camera.updateMatrixWorld();
     const marginX = (leaf.driftX * 1.1) / Math.max(toScreenX, 1e-4);
     const marginY = (leaf.driftY * 1.1) / Math.max(toScreenY, 1e-4);
@@ -282,6 +288,19 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
         const targetX = side * (TITLE_ZONE.x + marginX + 0.08);
         leaf.home.x += (targetX - projected.x) * toScreenX;
       }
+    }
+  }
+
+  function avoidCornerProjection(leaf, toScreenX, toScreenY) {
+    if (!CORNER_ZONE) return;
+    camera.updateMatrixWorld();
+    const mx = leaf.driftX * 1.1 / Math.max(toScreenX, 1e-4);
+    const my = leaf.driftY * 1.1 / Math.max(toScreenY, 1e-4);
+    for (let step = 0; step < 3; step += 1) {
+      projected.copy(leaf.home).project(camera);
+      if (!(projected.x > CORNER_ZONE.left - mx && projected.x < CORNER_ZONE.right + mx &&
+        projected.y > CORNER_ZONE.bottom - my && projected.y < CORNER_ZONE.top + my)) break;
+      leaf.home.y += (CORNER_ZONE.top + my + 0.03 - projected.y) * toScreenY;
     }
   }
 
@@ -333,11 +352,15 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       duration: arrive === 'fall' && !reducedMotion ? range(rng, 5.5, 7) : 0.9,
       startAt: clock + delay,
       home: new THREE.Vector3(),
+      anchor: new THREE.Vector3(),
+      moveFrom: new THREE.Vector3(),
+      moveStart: null,
       position: new THREE.Vector3(),
       scaleNow: 0,
       emphasis: 0,
     };
     placeHome(leaf);
+    leaf.anchor.copy(leaf.home);
     leaf.position.copy(leaf.home);
 
     const index = leaves.findIndex((other) => other.wish.id > wish.id);
@@ -370,9 +393,14 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     restFocus = 2 / (1 / nearest + 1 / farthest);
   }
 
-  function layout() {
+  function layout({ animate = false } = {}) {
     halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    leaves.forEach(placeHome);
+    for (const leaf of leaves) {
+      const tween = animate || leaf.moveStart !== null;
+      if (tween) { leaf.moveFrom.copy(leaf.anchor); leaf.moveStart = clock; }
+      placeHome(leaf);
+      if (!tween) leaf.anchor.copy(leaf.home);
+    }
     updateRestFocus();
   }
 
@@ -392,14 +420,20 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       const settled = easeOutCubic(t);
       const falling = leaf.arrive === 'fall' ? 1 - settled : 0;
 
+      if (leaf.moveStart !== null) {
+        const k = Math.min((clock - leaf.moveStart) / MOVE_DURATION, 1);
+        leaf.anchor.lerpVectors(leaf.moveFrom, leaf.home, easeInOutCubic(k));
+        if (k >= 1) leaf.moveStart = null;
+      }
+
       // 停留時的緩慢飄動
       const a = time * leaf.speed + leaf.phase;
       const b = time * leaf.speed * 0.7 + leaf.phase2;
       const hover = settled * motion;
       leaf.position.set(
-        leaf.home.x + Math.sin(a) * leaf.driftX * hover,
-        leaf.home.y + Math.sin(b) * leaf.driftY * hover,
-        leaf.home.z + Math.cos(a * 0.8) * 0.25 * hover,
+        leaf.anchor.x + Math.sin(a) * leaf.driftX * hover,
+        leaf.anchor.y + Math.sin(b) * leaf.driftY * hover,
+        leaf.anchor.z + Math.cos(a * 0.8) * 0.25 * hover,
       );
       // 飄落：從上方帶著左右擺盪落到定位
       if (falling > 0) {
@@ -475,10 +509,15 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     add,
     layout,
     /** 標題在畫面上的範圍（中心 0、邊緣 ±1，上為正；左右對稱取 x 半寬），許願葉的停留位置會避開 */
-    setTitleZone(zone) {
-      TITLE_ZONE = { ...zone };
-      layout();
+    setTitleZone(zone, { animate = false } = {}) {
+      TITLE_ZONE = zone ? { ...zone } : null;
+      layout({ animate });
     },
+    // Store only; the next layout applies this zone together with the title zone.
+    setCornerZone(zone) {
+      CORNER_ZONE = zone ? { ...zone } : null;
+    },
+    get moving() { return leaves.some((leaf) => leaf.moveStart !== null); },
     update,
     pick: pickWish,
     /** 前景樹枝佔用的角落（見 placeHome），null 表示不避開 */

@@ -456,6 +456,23 @@ body:has(#wish-card-dialog[open]) .title > * {
   opacity: 0;
 }
 
+.is-title-fading .title > *,
+.is-title-dismissed .title > * { opacity: 0; }
+.is-title-fading .title > * { transition: opacity 0.6s ease; }
+.is-title-dismissed .title p { visibility: hidden; }
+.is-title-dismissed .title h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* 右下角的環境音開關：預設靜音（顯示斜線），按下才出聲 */
 .sound-toggle {
   position: fixed;
@@ -504,6 +521,60 @@ body:has(#wish-card-dialog[open]) .title > * {
 .sound-toggle[aria-pressed='false'] .sound-toggle__waves,
 .sound-toggle[aria-pressed='true'] .sound-toggle__mute {
   display: none;
+}
+
+.corner-logo {
+  position: fixed;
+  left: calc(env(safe-area-inset-left, 0px) + 18px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: .45em;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 246, 230, 0.4);
+  background: rgba(36, 12, 5, 0.58);
+  color: var(--wish-cream);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-decoration: none;
+  font-family: var(--wish-serif);
+  letter-spacing: .2em;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .6s ease, visibility 0s linear .6s;
+}
+.corner-logo__icon { width: 20px; height: 20px; fill: #ffd978; }
+.is-title-fading .corner-logo,
+.is-title-dismissed .corner-logo {
+  opacity: .85;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity .6s ease, visibility 0s;
+}
+.corner-logo:hover,
+.corner-logo:focus-visible {
+  opacity: 1;
+  background: rgba(60, 20, 8, 0.55);
+}
+@media (max-width: 768px) {
+  .corner-logo {
+    left: calc(env(safe-area-inset-left, 0px) + 12px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+  .corner-logo__text { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title > *, .corner-logo { transition: none !important; }
 }
 
 @media (max-width: 768px) {
