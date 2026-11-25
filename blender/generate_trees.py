@@ -8,6 +8,7 @@
 已於 Blender 5.3.0 驗證。
 """
 
+import hashlib
 import math
 import random
 import sys
@@ -22,11 +23,16 @@ LEAVES_PER_CLUSTER = 42
 
 # 每個變體的（樹冠內側色, 樹冠外側色）；外側與頂部較紅，內側偏黃橘
 VARIANTS = [
-    ("#e8641c", "#b3161f"),
-    ("#f59a1e", "#d92b1a"),
-    ("#f7b52a", "#e5601a"),
-    ("#f6c443", "#ee8a1d"),
-    ("#c43a1a", "#8e1220"),
+    ("#e8641c", "#b3161f", {}),
+    ("#f59a1e", "#d92b1a", {}),
+    ("#f7b52a", "#e5601a", {}),
+    ("#f6c443", "#ee8a1d", {}),
+    ("#c43a1a", "#8e1220", {}),
+    ("#f08a2a", "#c8261a", dict(trunk_len=2.4, spread=(0.3, 0.55), lift=0.18, len_decay=(0.7, 0.82), leaves_per_cluster=30)),
+    ("#e65a1e", "#a3141e", dict(trunk_len=1.3, root_children=4, spread=(0.9, 1.25), lift=0.02, min_child_z=0.0, len_decay=(0.72, 0.88), leaves_per_cluster=30)),
+    ("#f7b52a", "#e87a1d", dict(max_depth=2, trunk_len=1.2, trunk_radius=0.11, children=[3], leaves_per_cluster=30)),
+    ("#d94a1a", "#9a1420", dict(lean=(0.35, 0.1, 1), leaves_per_cluster=30)),
+    ("#f29a24", "#d4321a", dict(heavy_side=0.7, spread=(0.7, 1.15), leaves_per_cluster=30)),
 ]
 
 # 楓葉輪廓（葉柄朝 -Y），由中心點以扇形三角化
@@ -81,43 +87,49 @@ def any_perpendicular(direction):
 # ---------------------------------------------------------------- 枝幹骨架
 
 
-def grow(rng, start, direction, length, radius, depth, branches, anchors):
+def grow(rng, start, direction, length, radius, depth, branches, anchors, habit=None):
     """遞迴生長一段枝條；末端枝條把端點登記為葉叢錨點。"""
+    habit = habit or {}
     segments = 4
     points = [start.copy()]
     radii = [radius]
     d = direction.normalized()
     for i in range(segments):
-        lift = UP * (0.08 if depth > 0 else 0.0)
+        lift = UP * (habit.get('lift', 0.08) if depth > 0 else 0.0)
+        if depth == 1 and 'lean' in habit:
+            lift += Vector((-habit['lean'][0], -habit['lean'][1], 0)) * 0.18
         d = (d + random_unit(rng) * 0.2 + lift).normalized()
         points.append(points[-1] + d * (length / segments))
         radii.append(radius * (1.0 - 0.4 * (i + 1) / segments))
     branches.append((points, radii))
 
-    if depth == MAX_DEPTH:
+    if depth == habit.get('max_depth', MAX_DEPTH):
         anchors.append(points[-1])
         anchors.append(points[segments // 2])
         return
 
-    child_count = 3 if depth == 0 else rng.choice([2, 3])
+    child_count = habit.get('root_children', 3) if depth == 0 else rng.choice(habit.get('children', [2, 3]))
     u = any_perpendicular(d)
     v = d.cross(u)
     base_azimuth = rng.uniform(0, math.tau)
     for j in range(child_count):
-        spread = rng.uniform(0.55, 1.0)
+        spread = rng.uniform(*habit.get('spread', (0.55, 1.0)))
         azimuth = base_azimuth + j * math.tau / child_count + rng.uniform(-0.4, 0.4)
         side = u * math.cos(azimuth) + v * math.sin(azimuth)
+        if habit.get('heavy_side', 0):
+            side = (side * (1 - habit['heavy_side']) + Vector((1, 0, 0)) * habit['heavy_side']).normalized()
         child_dir = d * math.cos(spread) + side * math.sin(spread)
-        child_dir.z = max(child_dir.z, 0.12)  # 不讓枝條往下長
+        child_dir.z = max(child_dir.z, habit.get('min_child_z', 0.12))  # 不讓枝條往下長
         grow(
             rng,
             points[-1],
             child_dir,
-            length * rng.uniform(0.62, 0.8),
+            length * rng.uniform(*habit.get('len_decay', (0.62, 0.8))),
             radii[-1] * 0.78,
             depth + 1,
             branches,
             anchors,
+            habit,
         )
 
 
@@ -156,7 +168,7 @@ def build_trunk_mesh(name, branches):
 # ---------------------------------------------------------------- 葉片
 
 
-def build_foliage_mesh(name, rng, anchors, inner_color, outer_color):
+def build_foliage_mesh(name, rng, anchors, inner_color, outer_color, leaves_per_cluster=LEAVES_PER_CLUSTER):
     verts, faces, colors = [], [], []
 
     crown_center = sum(anchors, Vector()) / len(anchors)
@@ -185,7 +197,7 @@ def build_foliage_mesh(name, rng, anchors, inner_color, outer_color):
             colors.append(fill_color)
         faces.extend((base + a, base + b, base + c) for a, b, c in ICOSAHEDRON_FACES)
 
-        for _ in range(LEAVES_PER_CLUSTER):
+        for _ in range(leaves_per_cluster):
             direction = random_unit(rng)
             if direction.z < -0.3:
                 direction.z *= -0.5
@@ -265,11 +277,16 @@ def add_object(name, mesh, material):
     return obj
 
 
-def build_tree(index, inner_hex, outer_hex, bark, foliage):
+def build_tree(index, inner_hex, outer_hex, bark, foliage, habit=None):
+    habit = habit or {}
     rng = random.Random(1000 + index)
     branches, anchors = [], []
     lean = Vector((rng.uniform(-0.08, 0.08), rng.uniform(-0.08, 0.08), 1.0))
-    grow(rng, Vector((0, 0, 0)), lean, rng.uniform(1.5, 1.9), 0.17, 0, branches, anchors)
+    if 'lean' in habit:
+        lean = Vector(habit['lean'])
+    length = rng.uniform(1.5, 1.9)
+    for stem in range(habit.get('stems', 1)):
+        grow(rng, Vector((stem * 0.25, 0, 0)), lean, habit.get('trunk_len', length), habit.get('trunk_radius', 0.17), 0, branches, anchors, habit)
     branches[0][1][0] *= 1.6  # 樹根處加粗
 
     add_object(f"Maple_{index}_Trunk", build_trunk_mesh(f"Maple_{index}_Trunk", branches), bark)
@@ -279,8 +296,13 @@ def build_tree(index, inner_hex, outer_hex, bark, foliage):
         anchors,
         srgb_to_linear(inner_hex),
         srgb_to_linear(outer_hex),
+        habit.get("leaves_per_cluster", LEAVES_PER_CLUSTER),
     )
     add_object(f"Maple_{index}_Foliage", foliage_mesh, foliage)
+    for part in ('Trunk', 'Foliage'):
+        mesh = bpy.data.objects[f"Maple_{index}_{part}"].data
+        payload = ','.join(f'{c:.5f}' for v in mesh.vertices for c in v.co)
+        print(f'[hash] {index} {part} {hashlib.sha1(payload.encode()).hexdigest()}')
     height = max(a.z for a in anchors) + 0.8
     print(
         f"[maple] 變體 {index}: 葉叢 {len(anchors)}、"
@@ -296,8 +318,8 @@ def main():
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bark, foliage = create_materials()
-    for index, (inner_hex, outer_hex) in enumerate(VARIANTS):
-        build_tree(index, inner_hex, outer_hex, bark, foliage)
+    for index, (inner_hex, outer_hex, habit) in enumerate(VARIANTS):
+        build_tree(index, inner_hex, outer_hex, bark, foliage, habit)
 
     bpy.ops.export_scene.gltf(
         filepath=output_path,

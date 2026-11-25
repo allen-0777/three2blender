@@ -130,13 +130,13 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
   scene.add(lanterns.group);
 
   // ---- 樹 ----
-  const giant = createGiantTree({ barkNormals: quality.barkNormals, leafBudget: quality.giantLeaves });
+  const giant = createGiantTree({ barkNormals: quality.barkNormals, leafBudget: quality.giantLeaves, detail: quality.giantLeaves <= 11000 ? 'low' : quality.giantLeaves <= 20000 ? 'mid' : 'high' });
   scene.add(giant.group);
   scene.add(createPines(trees.filter((t) => t.species === 'pine'), createFoliageMaterial({ sunWorld: sceneTwoSun, transmit: 0.5, forward: 1.2, layers: 0.03 })));
   const [mapleVariants, ginkgoVariants, greenVariants] = await Promise.all([
-    loadVariants(),
-    loadVariants({ pickHue: weighted(GINKGO_HUES), seed: 3000 }),
-    loadVariants({ pickHue: weighted(GREEN_HUES), seed: 5000 }),
+    loadVariants({ indices: [0, 1, 2, 3, 4] }),
+    loadVariants({ indices: [0, 1, 2, 3, 4], pickHue: weighted(GINKGO_HUES), seed: 3000 }),
+    loadVariants({ indices: [0, 1, 2, 3, 4], pickHue: weighted(GREEN_HUES), seed: 5000 }),
   ]);
   const trunkMaterial = createTrunkMaterial({ barkNormals: quality.barkNormals });
   const foliageMaterial = createFoliageMaterial({ sunWorld: sceneTwoSun });
@@ -268,6 +268,8 @@ export async function createSceneTwo({ renderer, quality, reducedMotion = false 
       return true;
     },
     applyTier(tier) {
+      giant.setLeafBudget(tier.giantLeaves);
+      renderer.shadowMap.needsUpdate = true;
       fallingLeaves.setCount(Math.min(fallingLeafCapacity, reducedMotion ? 250 : tier.fallingLeaves));
       groundLeaves.count = Math.min(groundLeafCapacity, Math.round(tier.groundLeaves * 1.6));
       sparkles.setLevel(tier.sparkles);

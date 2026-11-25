@@ -3,6 +3,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createRng, pickLeafHue, range } from './palette.js';
 import { groundHeight } from './environment.js';
 import { leafTransmission } from './leafShading.js';
+import { createFarForest } from './farForest.js';
+import { FOREST_SEED, LEGACY_VARIANTS, forestPlan, layoutLegacy, LAYER_BUDGET } from './forestLayout.js';
+export { FOREST_SEED, forestLayout } from './forestLayout.js';
 import { SUN_DIRECTION } from './palette.js';
 
 // 楓樹模型由 blender/generate_trees.py 產生（npm run models）。
@@ -174,7 +177,7 @@ export function createFoliageMaterial({ sunWorld = null, ...options } = {}) {
 
 // ---- 樹冠重建：GLB 的葉子縮小、重新上色，再在每個葉叢裡補上更多小葉 ----
 const LEAF_SHRINK = 0.6; // GLB 原本的葉片（0.24–0.38）縮成這個比例
-const EXTRA_PER_CLUSTER = 22; // 每個葉叢額外補的小葉數
+const EXTRA_PER_CLUSTER = 24; // 每個葉叢額外補的小葉數
 // 補葉用的簡化楓葉輪廓（五裂，10 個外緣點），以中心點扇形三角化
 const SMALL_LEAF = [
   [0, -0.5], [0.3, -0.12], [0.5, -0.04], [0.3, 0.12], [0.36, 0.38],
@@ -211,7 +214,7 @@ const smoothstep = (x, a, b) => THREE.MathUtils.smoothstep(x, a, b);
  *  3. 每個葉叢再補 EXTRA_PER_CLUSTER 片小葉，越靠葉叢內側越暗。
  * 回傳新的 BufferGeometry（position、normal、color、aAo、aCrown）。
  */
-function rebuildFoliage(geometry, rng, pickHue = pickLeafHue) {
+function rebuildFoliage(geometry, rng, pickHue = pickLeafHue, lod = 0) {
   const index = geometry.index;
   const position = geometry.attributes.position;
   const normal = geometry.attributes.normal;
@@ -324,14 +327,16 @@ function rebuildFoliage(geometry, rng, pickHue = pickLeafHue) {
   const p = new THREE.Vector3();
   const n = new THREE.Vector3();
   const crownOffset = new THREE.Vector3();
-  for (const leaf of leaves) {
+  for (const [leafIndex, leaf] of leaves.entries()) {
+    // Stable integer hash: LOD selection consumes none of the colour RNG.
+    if (lod === 1 && ((Math.imul(leafIndex + 1, 2654435761) >>> 0) & 1)) continue;
     const ao = occlusion(leaf.center);
     crownOffset.subVectors(leaf.center, crown).divideScalar(crownRadius);
     original.fromBufferAttribute(geometry.attributes.color, leaf.list[0]);
     const tint = leafColor(leaf.center, original).clone();
     const centerVertex = Math.min(...leaf.list);
     for (const i of leaf.list) {
-      p.fromBufferAttribute(position, i).sub(leaf.center).multiplyScalar(LEAF_SHRINK).add(leaf.center);
+      p.fromBufferAttribute(position, i).sub(leaf.center).multiplyScalar(lod === 1 ? 0.78 : LEAF_SHRINK).add(leaf.center);
       n.fromBufferAttribute(normal, i);
       // 葉脈匯集處略暗
       const c = i === centerVertex ? tint.clone().multiplyScalar(0.8) : tint;
@@ -357,9 +362,9 @@ function rebuildFoliage(geometry, rng, pickHue = pickLeafHue) {
   };
   const corner = new THREE.Vector3();
   for (const cluster of clusters) {
-    for (let k = 0; k < EXTRA_PER_CLUSTER; k++) {
+    for (let k = 0; k < (lod === 1 ? 8 : EXTRA_PER_CLUSTER); k++) {
       randomUnit(dir);
-      if (dir.y < -0.4) dir.y *= -0.4;
+      if (dir.y < -0.75) dir.y *= -0.4;
       dir.normalize();
       // 葉叢外殼最密，往內也有一些（內側的會被 AO 壓暗，填補縫隙）
       const radial = Math.sqrt(range(rng, 0.12, 1)) * range(rng, 0.85, 1.12);
@@ -419,7 +424,20 @@ function loadModel() {
  * 載入 GLB，回傳 [{ trunk: BufferGeometry, foliage: BufferGeometry }, ...]
  * pickHue：（可選）葉色挑選函式 (rng) => hex，場景二的銀杏、帶綠楓樹用；seed 讓不同樹種的葉色序列不同
  */
-export async function loadVariants({ pickHue = pickLeafHue, seed = 1000 } = {}) {
+const variantsCache = new Map();
+export function loadVariants({ pickHue = pickLeafHue, seed = 1000, indices = null, lod = 0 } = {}) {
+  const key = `${seed}:${indices}:${lod}`;
+  if (!variantsCache.has(key)) {
+    const pending = parseVariants({ pickHue, seed, indices, lod }).catch((error) => {
+      variantsCache.delete(key);
+      throw error;
+    });
+    variantsCache.set(key, pending);
+  }
+  return variantsCache.get(key);
+}
+
+async function parseVariants({ pickHue, seed, indices, lod }) {
   const gltf = await loadModel();
 
   const variants = [];
@@ -427,12 +445,16 @@ export async function loadVariants({ pickHue = pickLeafHue, seed = 1000 } = {}) 
     const match = child.isMesh && MESH_NAME.exec(child.name);
     if (!match) return;
     const index = Number(match[1]);
+    if (indices && !indices.includes(index)) return;
     const part = match[2].toLowerCase();
     variants[index] ??= {};
     variants[index][part] = child.geometry.clone().applyMatrix4(child.matrixWorld);
     if (part === 'foliage') {
-      const rebuilt = rebuildFoliage(variants[index][part], createRng(seed + index), pickHue);
-      if (rebuilt) variants[index][part] = rebuilt;
+      const rebuilt = rebuildFoliage(variants[index][part], createRng(seed + index), pickHue, lod);
+      if (rebuilt) {
+        variants[index][part].dispose();
+        variants[index][part] = rebuilt;
+      }
       else {
         // 找不到葉叢（模型格式不同）時保留原幾何，AO 一律 1
         const g = variants[index][part];
@@ -447,44 +469,6 @@ export async function loadVariants({ pickHue = pickLeafHue, seed = 1000 } = {}) 
   return complete;
 }
 
-// 樹的配置用固定種子，地面的樹下 AO 與葉縫光斑（environment.js）也用同一份配置
-export const FOREST_SEED = 7;
-
-/** 樹的位置與大小（不含旋轉以外的亂數），給地面預先計算樹下陰暗與光斑範圍用 */
-export function forestLayout() {
-  return layoutTrees(createRng(FOREST_SEED));
-}
-
-/** 沿中央小徑兩側決定每棵樹的位置、旋轉與大小 */
-function layoutTrees(rng) {
-  const leanRng = createRng(FOREST_SEED * 7919);
-  const placements = [];
-  const place = (x, z) =>
-    placements.push({
-      x,
-      z,
-      rotation: rng() * Math.PI * 2,
-      scale: range(rng, 0.95, 1.45),
-      // 每棵樹微微歪向不同方向，打破整排複製的果園感。
-      // 用另一組亂數：位置與大小維持原本的配置（太陽藏在左前方那棵樹的樹冠後面）
-      leanX: range(leanRng, -0.07, 0.07),
-      leanZ: range(leanRng, -0.07, 0.07),
-    });
-
-  // 緊鄰小徑的兩排
-  for (let z = 7; z > -58; z -= 4.2) {
-    for (const side of [-1, 1]) {
-      place(side * range(rng, 4.2, 6.2), z + range(rng, -1.2, 1.2));
-    }
-  }
-  // 外圍較稀疏的樹，補滿畫面兩側與遠景
-  for (let i = 0; i < 26; i++) {
-    const side = rng() < 0.5 ? -1 : 1;
-    place(side * range(rng, 9, 30), range(rng, -60, 4));
-  }
-  return placements;
-}
-
 export function createInstances(geometry, material, placements, tint, heightFn = groundHeight) {
   const mesh = new THREE.InstancedMesh(geometry, material, placements.length);
   const dummy = new THREE.Object3D();
@@ -496,7 +480,10 @@ export function createInstances(geometry, material, placements, tint, heightFn =
     dummy.scale.setScalar(p.scale);
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
-    if (tint) mesh.setColorAt(i, color.setScalar(p.brightness));
+    if (tint) {
+      const b = p.brightness;
+      mesh.setColorAt(i, p.tint ? color.setRGB(b, b * p.tint[1], b * p.tint[2]) : color.setScalar(b));
+    }
   });
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -508,23 +495,56 @@ export function createInstances(geometry, material, placements, tint, heightFn =
 }
 
 /** 建立楓林：每個變體的枝幹與葉片各用一個 InstancedMesh 繪製 */
-export async function createForest(rng, { barkNormals = true } = {}) {
+export async function createForest(rng, { barkNormals = true, tierName = 'high', legacy = false } = {}) {
+  const started = performance.now();
+  const plan = legacy ? { mid: [], far: [] } : forestPlan(tierName);
   const trunkMaterial = createTrunkMaterial({ barkNormals });
   const foliageMaterial = createFoliageMaterial();
-  const variants = await loadVariants();
-  const groups = variants.map(() => []);
-  for (const placement of layoutTrees(rng)) {
+  const indices = legacy ? [0, 1, 2, 3, 4] : null;
+  const variants = await loadVariants({ indices });
+  const lodVariants = legacy ? [] : await loadVariants({ lod: 1 });
+  const nearGroups = variants.map(() => []);
+  const midGroups = variants.map(() => []);
+  const remapRng = createRng(FOREST_SEED * 104729);
+  for (const placement of layoutLegacy(rng)) {
     placement.brightness = range(rng, 0.82, 1.0);
-    groups[Math.floor(rng() * variants.length)].push(placement);
+    let variant = Math.floor(rng() * LEGACY_VARIANTS);
+    if (!legacy && placement.z < -6 && remapRng() < 0.5) {
+      variant = 5 + Math.floor(remapRng() * 5);
+      if (variant === 7) placement.scale *= 0.8;
+      if (variant === 9) placement.rotation = (placement.x > 0 ? Math.PI : 0) + range(remapRng, -0.5, 0.5);
+    }
+    nearGroups[variant].push(placement);
   }
-
-  const forest = new THREE.Group();
+  if (!legacy) plan.mid.forEach((p, priority) => midGroups[p.variant].push({ ...p, priority }));
+  const group = new THREE.Group();
+  group.name = 'forest-1';
+  const batches = [];
   variants.forEach((variant, i) => {
-    if (groups[i].length === 0) return;
-    forest.add(
-      createInstances(variant.trunk, trunkMaterial, groups[i], false),
-      createInstances(variant.foliage, foliageMaterial, groups[i], true),
-    );
+    const near = nearGroups[i], mid = midGroups[i];
+    if (!near.length && !mid.length) return;
+    const trunk = createInstances(variant.trunk, trunkMaterial, [...near, ...mid], false);
+    group.add(trunk);
+    if (near.length) group.add(createInstances(variant.foliage, foliageMaterial, near, true));
+    const foliage = mid.length ? createInstances(lodVariants[i].foliage, foliageMaterial, mid, true) : null;
+    if (foliage) group.add(foliage);
+    batches.push({ trunk, foliage, near, mid });
   });
-  return forest;
+  const far = createFarForest(legacy ? [] : plan.far);
+  if (!legacy) group.add(far.group);
+  const counts = { near: 58, mid: 0, far: 0, variantsUsed: batches.length };
+  function setTier(name) {
+    const budget = LAYER_BUDGET[name] ?? LAYER_BUDGET.high;
+    counts.mid = 0;
+    for (const batch of batches) {
+      const n = batch.mid.filter((p) => p.priority < budget.mid).length;
+      batch.trunk.count = batch.near.length + n;
+      if (batch.foliage) batch.foliage.count = n;
+      counts.mid += n;
+    }
+    far.setBudget(legacy ? 0 : budget.far);
+    counts.far = far.counts.far;
+  }
+  setTier(tierName);
+  return { group, counts, setTier, loadMs: performance.now() - started };
 }

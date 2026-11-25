@@ -16,7 +16,7 @@ export const TIERS = {
     sparkles: 1,
     // 場景二：水面倒影的 cube map 解析度（0 = 不拍，用天空近似）與神木的葉片數
     envSize: 256,
-    giantLeaves: 26000,
+    giantLeaves: 30000,
     grass: 1500,
   },
   mid: {
@@ -33,7 +33,7 @@ export const TIERS = {
     groundLeaves: 6000,
     sparkles: 0.6,
     envSize: 128,
-    giantLeaves: 18000,
+    giantLeaves: 20000,
     grass: 1100,
   },
   low: {

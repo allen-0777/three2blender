@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { createRng } from './palette.js';
 import { createEnvironment, sunDirection } from './environment.js';
 import { createForest, forestLayout, FOREST_SEED } from './trees.js';
+import { layoutLegacy, forestPlan } from './forestLayout.js';
 import { createFallingLeaves, createGroundLeaves, createLitterSpots } from './leaves.js';
 import { createSparkles } from './sparkles.js';
 import { komorebiUniforms } from './komorebi.js';
@@ -27,6 +28,7 @@ THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fra
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
 const params = new URLSearchParams(window.location.search);
+const legacyForest = params.get('forest') === 'legacy';
 const captureMode = params.get('capture') === '1';
 
 const initial = chooseInitialTier({ isSmallScreen });
@@ -39,6 +41,16 @@ let pixelRatioLimit = Infinity;
 const canvas = document.querySelector('#scene');
 // 主畫面先畫進多重取樣的 HDR render target，canvas 本身不需要 MSAA
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.info.autoReset = false;
+let lastFrame = { calls: 0, triangles: 0 };
+const frameHistory = [];
+const recentFrameMs = () => frameHistory.length ? frameHistory.reduce((sum, f) => sum + f.ms, 0) / frameHistory.length : 0;
+const medianFrame = (key) => {
+  const values = frameHistory.map((f) => f[key]).sort((a, b) => a - b);
+  return values.length ? values[Math.floor(values.length / 2)] : 0;
+};
+let forestLoadMs = 0;
+let forest = null;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // tone mapping 只在最後畫到螢幕的那一個 pass 生效（three 對 render target 不做 tone mapping）
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -64,8 +76,11 @@ camera.lookAt(LOOK_AT);
 // 開場的檔次決定貼圖解析度與陰影圖大小；之後降級只關效果、減份量，不重新載入貼圖
 const rng = createRng(20261121);
 // 樹的配置是固定的：地面先用它算樹下 AO、光斑範圍與落葉堆的位置
-const trees = forestLayout();
-const litterSpots = createLitterSpots({ trees, rng });
+const legacy = layoutLegacy(createRng(FOREST_SEED));
+const trees = legacyForest ? legacy : forestLayout(tierName);
+const litterSpots = createLitterSpots({ trees: legacy, rng });
+if (!legacyForest) litterSpots.push(...createLitterSpots({ trees: forestPlan(tierName).mid, rng: createRng(FOREST_SEED * 577) }));
+// AO is baked for the opening tier; runtime degradation intentionally keeps that bake.
 const environment = createEnvironment(
   scene,
   rng,
@@ -78,9 +93,12 @@ const environment = createEnvironment(
 );
 post.setSun(environment.sun);
 // 楓樹模型非同步載入；用獨立的亂數序列，載入時機不影響其他物件的配置
-createForest(createRng(FOREST_SEED), { barkNormals: tier.barkNormals })
-  .then((forest) => {
-    scene.add(forest);
+createForest(createRng(FOREST_SEED), { barkNormals: tier.barkNormals, tierName, legacy: legacyForest })
+  .then((result) => {
+    forest = result;
+    forest.setTier(tierName);
+    scene.add(forest.group);
+    forestLoadMs = forest.loadMs;
     renderer.shadowMap.needsUpdate = true;
   })
   .catch((error) => console.error('楓樹模型載入失敗', error));
@@ -216,7 +234,9 @@ function applyTier() {
   fallingLeaves.setCount(Math.min(fallingLeafCapacity, reducedMotion ? 250 : tier.fallingLeaves));
   groundLeaves.count = Math.min(groundLeafCapacity, tier.groundLeaves);
   sparkles.setLevel(tier.sparkles);
+  forest?.setTier(tierName);
   sceneTwo?.applyTier(tier);
+  renderer.shadowMap.needsUpdate = true;
   document.documentElement.dataset.quality = tierName;
   resize();
 }
@@ -387,7 +407,7 @@ window.__visual = {
     return { ...lens, fov: camera.fov, fStop: post.look.fStop };
   },
   get frameMs() {
-    return frameWatch.average;
+    return recentFrameMs();
   },
   get pixelRatio() {
     return renderer.getPixelRatio();
@@ -405,7 +425,18 @@ window.__visual = {
       ? { position: new THREE.Vector3(...pose.position), target: new THREE.Vector3(...pose.target), focus: pose.focus ?? null }
       : null;
   },
-  info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, capture: captureMode, ...post.info() }),
+  info: () => ({ tier: tierName, auxScale, forced: initial.forced, reducedMotion, capture: captureMode, ...post.info(),
+    frameMs: recentFrameMs(),
+    trees: {
+      scene1: { near: forest?.counts.near ?? 0, mid: forest?.counts.mid ?? 0, far: forest?.counts.far ?? 0,
+        variants: forest?.counts.variantsUsed ?? 0, loadMs: forestLoadMs },
+      scene2: sceneTwo ? {
+        giantLeavesBuilt: sceneTwo.giant.leafCount, giantLeavesDrawn: sceneTwo.giant.leavesDrawn,
+        giantTips: sceneTwo.giant.tipCount, fillerTips: sceneTwo.giant.fillerCount,
+      } : null,
+    },
+    frame: { ...lastFrame, callsMedian: medianFrame('calls'), trianglesMedian: medianFrame('triangles') },
+  }),
   /** 除錯／效能量測用：直接切換後期效果（{ dof, glow, rays, auxScale }） */
   configure(next) {
     post.configure(next);
@@ -499,5 +530,9 @@ renderer.setAnimationLoop((now) => {
     sceneTwo.updateReflections([wishLeaves.group]);
   }
 
+  renderer.info.reset();
   post.render(activeScene, camera, lens);
+  lastFrame = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+  frameHistory.push({ ...lastFrame, ms: Math.min(elapsed, 250) });
+  if (frameHistory.length > 60) frameHistory.shift();
 });

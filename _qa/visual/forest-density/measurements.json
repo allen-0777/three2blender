@@ -1,0 +1,1522 @@
+[
+  {
+    "label": "forest-desktop-high-legacy",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.664999999999996,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 0,
+          "far": 0,
+          "variants": 5,
+          "loadMs": 1014
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 44,
+        "triangles": 2130169,
+        "callsMedian": 44,
+        "trianglesMedian": 2130169
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753016489675,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    },
+    "stats": {
+      "meanMs": 16.63,
+      "p95Ms": 16.8,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-desktop-high-layered",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 389.2999999523163
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 65,
+        "triangles": 2290545,
+        "callsMedian": 65,
+        "trianglesMedian": 2290545
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.43575301649343,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    },
+    "stats": {
+      "meanMs": 16.65,
+      "p95Ms": 16.7,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-desktop-high-layered-scene2-afternoon",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.664999999999964,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 389.2999999523163
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 77,
+        "triangles": 3186921,
+        "callsMedian": 77,
+        "trianglesMedian": 3186921
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753025028463,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    }
+  },
+  {
+    "label": "forest-desktop-high-layered-scene2-dusk",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.664999999999964,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 389.2999999523163
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 78,
+        "triangles": 3186933,
+        "callsMedian": 78,
+        "trianglesMedian": 3186933
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753025028463,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    }
+  },
+  {
+    "label": "forest-desktop-high-layered-scene2-night",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 389.2999999523163
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 78,
+        "triangles": 3186933,
+        "callsMedian": 78,
+        "trianglesMedian": 3186933
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753025028463,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    }
+  },
+  {
+    "label": "forest-desktop-low-legacy",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 0,
+          "far": 0,
+          "variants": 5,
+          "loadMs": 296.39999985694885
+        },
+        "scene2": null
+      },
+      "frame": {
+        "calls": 33,
+        "triangles": 1980658,
+        "callsMedian": 33,
+        "trianglesMedian": 1980658
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753020104187,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    },
+    "stats": {
+      "meanMs": 16.62,
+      "p95Ms": 16.7,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-desktop-low-layered",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 215.20000004768372
+        },
+        "scene2": null
+      },
+      "frame": {
+        "calls": 53,
+        "triangles": 1931410,
+        "callsMedian": 53,
+        "trianglesMedian": 1931410
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753019729892,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    },
+    "stats": {
+      "meanMs": 16.65,
+      "p95Ms": 16.8,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-desktop-low-layered-scene2-afternoon",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 215.20000004768372
+        },
+        "scene2": {
+          "giantLeavesBuilt": 11000,
+          "giantLeavesDrawn": 11000,
+          "giantTips": 249,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 66,
+        "triangles": 2754110,
+        "callsMedian": 66,
+        "trianglesMedian": 2754110
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753025028463,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    }
+  },
+  {
+    "label": "forest-desktop-low-layered-scene2-dusk",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 215.20000004768372
+        },
+        "scene2": {
+          "giantLeavesBuilt": 11000,
+          "giantLeavesDrawn": 11000,
+          "giantTips": 249,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 67,
+        "triangles": 2754122,
+        "callsMedian": 67,
+        "trianglesMedian": 2754122
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753025028463,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    }
+  },
+  {
+    "label": "forest-desktop-low-layered-scene2-night",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        1280,
+        800
+      ],
+      "dofSize": [
+        640,
+        400
+      ],
+      "glowSizes": [
+        [
+          320,
+          200
+        ],
+        [
+          160,
+          100
+        ],
+        [
+          80,
+          50
+        ]
+      ],
+      "frameMs": 16.665000000000024,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 215.20000004768372
+        },
+        "scene2": {
+          "giantLeavesBuilt": 11000,
+          "giantLeavesDrawn": 11000,
+          "giantTips": 249,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 67,
+        "triangles": 2754122,
+        "callsMedian": 67,
+        "trianglesMedian": 2754122
+      },
+      "lens": {
+        "focalLength": 35,
+        "focus": 13.435753025028463,
+        "fov": 32.26880217111643,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        1280,
+        800
+      ],
+      "css": [
+        1280,
+        800
+      ]
+    }
+  },
+  {
+    "label": "forest-mobile-high-legacy",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 0,
+          "far": 0,
+          "variants": 5,
+          "loadMs": 363.5
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 44,
+        "triangles": 2130169,
+        "callsMedian": 44,
+        "trianglesMedian": 2130169
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753017658309,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    },
+    "stats": {
+      "meanMs": 16.62,
+      "p95Ms": 16.7,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-mobile-high-layered",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 358.2000000476837
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 65,
+        "triangles": 2290545,
+        "callsMedian": 65,
+        "trianglesMedian": 2290545
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753017096355,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    },
+    "stats": {
+      "meanMs": 16.62,
+      "p95Ms": 16.7,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-mobile-high-layered-scene2-afternoon",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 358.2000000476837
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 71,
+        "triangles": 3047029,
+        "callsMedian": 71,
+        "trianglesMedian": 3047029
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753025028463,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    }
+  },
+  {
+    "label": "forest-mobile-high-layered-scene2-dusk",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 358.2000000476837
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 72,
+        "triangles": 3047041,
+        "callsMedian": 72,
+        "trianglesMedian": 3047041
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753025028463,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    }
+  },
+  {
+    "label": "forest-mobile-high-layered-scene2-night",
+    "info": {
+      "tier": "high",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": true,
+      "glow": true,
+      "rays": "full",
+      "raysIntensity": 1,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 21,
+          "far": 228,
+          "variants": 10,
+          "loadMs": 358.2000000476837
+        },
+        "scene2": {
+          "giantLeavesBuilt": 30000,
+          "giantLeavesDrawn": 30000,
+          "giantTips": 312,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 72,
+        "triangles": 3047041,
+        "callsMedian": 72,
+        "trianglesMedian": 3047041
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753025028463,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    }
+  },
+  {
+    "label": "forest-mobile-low-legacy",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 0,
+          "far": 0,
+          "variants": 5,
+          "loadMs": 277.80000019073486
+        },
+        "scene2": null
+      },
+      "frame": {
+        "calls": 33,
+        "triangles": 1980658,
+        "callsMedian": 33,
+        "trianglesMedian": 1980658
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753020618101,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    },
+    "stats": {
+      "meanMs": 16.62,
+      "p95Ms": 16.8,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-mobile-low-layered",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 269.09999990463257
+        },
+        "scene2": null
+      },
+      "frame": {
+        "calls": 53,
+        "triangles": 1931410,
+        "callsMedian": 53,
+        "trianglesMedian": 1931410
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753020451036,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    },
+    "stats": {
+      "meanMs": 16.64,
+      "p95Ms": 16.8,
+      "fps": 60
+    }
+  },
+  {
+    "label": "forest-mobile-low-layered-scene2-afternoon",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 269.09999990463257
+        },
+        "scene2": {
+          "giantLeavesBuilt": 11000,
+          "giantLeavesDrawn": 11000,
+          "giantTips": 249,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 60,
+        "triangles": 2614218,
+        "callsMedian": 60,
+        "trianglesMedian": 2614218
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753025028463,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    }
+  },
+  {
+    "label": "forest-mobile-low-layered-scene2-dusk",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.664999999999964,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 269.09999990463257
+        },
+        "scene2": {
+          "giantLeavesBuilt": 11000,
+          "giantLeavesDrawn": 11000,
+          "giantTips": 249,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 61,
+        "triangles": 2614230,
+        "callsMedian": 61,
+        "trianglesMedian": 2614230
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753025028463,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    }
+  },
+  {
+    "label": "forest-mobile-low-layered-scene2-night",
+    "info": {
+      "tier": "low",
+      "auxScale": 1,
+      "forced": true,
+      "reducedMotion": false,
+      "capture": false,
+      "supported": true,
+      "dof": false,
+      "glow": false,
+      "rays": "lite",
+      "raysIntensity": 0.5,
+      "msaa": 4,
+      "scene": [
+        390,
+        844
+      ],
+      "dofSize": [
+        195,
+        422
+      ],
+      "glowSizes": [
+        [
+          98,
+          211
+        ],
+        [
+          49,
+          106
+        ],
+        [
+          24,
+          53
+        ]
+      ],
+      "frameMs": 16.666666666666668,
+      "trees": {
+        "scene1": {
+          "near": 58,
+          "mid": 10,
+          "far": 90,
+          "variants": 10,
+          "loadMs": 269.09999990463257
+        },
+        "scene2": {
+          "giantLeavesBuilt": 11000,
+          "giantLeavesDrawn": 11000,
+          "giantTips": 249,
+          "fillerTips": 0
+        }
+      },
+      "frame": {
+        "calls": 61,
+        "triangles": 2614230,
+        "callsMedian": 61,
+        "trianglesMedian": 2614230
+      },
+      "lens": {
+        "focalLength": 22,
+        "focus": 13.435753025028463,
+        "fov": 49.426353760931796,
+        "fStop": 1.4
+      },
+      "pixelRatio": 1,
+      "canvas": [
+        390,
+        844
+      ],
+      "css": [
+        390,
+        844
+      ]
+    }
+  }
+]

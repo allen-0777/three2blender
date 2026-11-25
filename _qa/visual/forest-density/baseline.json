@@ -1,0 +1,354 @@
+[
+  {
+    "mobile": false,
+    "quality": "high",
+    "sceneIndex": 1,
+    "tier": "high",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": true,
+    "glow": true,
+    "rays": "full",
+    "raysIntensity": 1,
+    "msaa": 4,
+    "scene": [
+      1280,
+      800
+    ],
+    "dofSize": [
+      640,
+      400
+    ],
+    "glowSizes": [
+      [
+        320,
+        200
+      ],
+      [
+        160,
+        100
+      ],
+      [
+        80,
+        50
+      ]
+    ],
+    "frameMs": 16.666666666666668,
+    "loadMs": 320.10000014305115,
+    "frame": {
+      "callsMedian": 44,
+      "trianglesMedian": 2084699
+    }
+  },
+  {
+    "mobile": false,
+    "quality": "high",
+    "sceneIndex": 2,
+    "tier": "high",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": true,
+    "glow": true,
+    "rays": "full",
+    "raysIntensity": 1,
+    "msaa": 4,
+    "scene": [
+      1280,
+      800
+    ],
+    "dofSize": [
+      640,
+      400
+    ],
+    "glowSizes": [
+      [
+        320,
+        200
+      ],
+      [
+        160,
+        100
+      ],
+      [
+        80,
+        50
+      ]
+    ],
+    "frameMs": 16.666666666666668,
+    "loadMs": 263.10000014305115,
+    "frame": {
+      "callsMedian": 77,
+      "trianglesMedian": 3095071
+    }
+  },
+  {
+    "mobile": false,
+    "quality": "low",
+    "sceneIndex": 1,
+    "tier": "low",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": false,
+    "glow": false,
+    "rays": "lite",
+    "raysIntensity": 0.5,
+    "msaa": 4,
+    "scene": [
+      1280,
+      800
+    ],
+    "dofSize": [
+      640,
+      400
+    ],
+    "glowSizes": [
+      [
+        320,
+        200
+      ],
+      [
+        160,
+        100
+      ],
+      [
+        80,
+        50
+      ]
+    ],
+    "frameMs": 16.666666666666668,
+    "loadMs": 191,
+    "frame": {
+      "callsMedian": 33,
+      "trianglesMedian": 1935188
+    }
+  },
+  {
+    "mobile": false,
+    "quality": "low",
+    "sceneIndex": 2,
+    "tier": "low",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": false,
+    "glow": false,
+    "rays": "lite",
+    "raysIntensity": 0.5,
+    "msaa": 4,
+    "scene": [
+      1280,
+      800
+    ],
+    "dofSize": [
+      640,
+      400
+    ],
+    "glowSizes": [
+      [
+        320,
+        200
+      ],
+      [
+        160,
+        100
+      ],
+      [
+        80,
+        50
+      ]
+    ],
+    "frameMs": 16.664999999999996,
+    "loadMs": 197.5,
+    "frame": {
+      "callsMedian": 66,
+      "trianglesMedian": 2701210
+    }
+  },
+  {
+    "mobile": true,
+    "quality": "high",
+    "sceneIndex": 1,
+    "tier": "high",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": true,
+    "glow": true,
+    "rays": "full",
+    "raysIntensity": 1,
+    "msaa": 4,
+    "scene": [
+      390,
+      844
+    ],
+    "dofSize": [
+      195,
+      422
+    ],
+    "glowSizes": [
+      [
+        98,
+        211
+      ],
+      [
+        49,
+        106
+      ],
+      [
+        24,
+        53
+      ]
+    ],
+    "frameMs": 16.666666666666668,
+    "loadMs": 270.7999999523163,
+    "frame": {
+      "callsMedian": 44,
+      "trianglesMedian": 2084699
+    }
+  },
+  {
+    "mobile": true,
+    "quality": "high",
+    "sceneIndex": 2,
+    "tier": "high",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": true,
+    "glow": true,
+    "rays": "full",
+    "raysIntensity": 1,
+    "msaa": 4,
+    "scene": [
+      390,
+      844
+    ],
+    "dofSize": [
+      195,
+      422
+    ],
+    "glowSizes": [
+      [
+        98,
+        211
+      ],
+      [
+        49,
+        106
+      ],
+      [
+        24,
+        53
+      ]
+    ],
+    "frameMs": 16.665000000000024,
+    "loadMs": 262.7000000476837,
+    "frame": {
+      "callsMedian": 71,
+      "trianglesMedian": 2955179
+    }
+  },
+  {
+    "mobile": true,
+    "quality": "low",
+    "sceneIndex": 1,
+    "tier": "low",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": false,
+    "glow": false,
+    "rays": "lite",
+    "raysIntensity": 0.5,
+    "msaa": 4,
+    "scene": [
+      390,
+      844
+    ],
+    "dofSize": [
+      195,
+      422
+    ],
+    "glowSizes": [
+      [
+        98,
+        211
+      ],
+      [
+        49,
+        106
+      ],
+      [
+        24,
+        53
+      ]
+    ],
+    "frameMs": 16.664999999999996,
+    "loadMs": 189.90000009536743,
+    "frame": {
+      "callsMedian": 33,
+      "trianglesMedian": 1935188
+    }
+  },
+  {
+    "mobile": true,
+    "quality": "low",
+    "sceneIndex": 2,
+    "tier": "low",
+    "auxScale": 1,
+    "forced": true,
+    "reducedMotion": false,
+    "capture": false,
+    "supported": true,
+    "dof": false,
+    "glow": false,
+    "rays": "lite",
+    "raysIntensity": 0.5,
+    "msaa": 4,
+    "scene": [
+      390,
+      844
+    ],
+    "dofSize": [
+      195,
+      422
+    ],
+    "glowSizes": [
+      [
+        98,
+        211
+      ],
+      [
+        49,
+        106
+      ],
+      [
+        24,
+        53
+      ]
+    ],
+    "frameMs": 16.664999999999996,
+    "loadMs": 189,
+    "frame": {
+      "callsMedian": 60,
+      "trianglesMedian": 2561318
+    }
+  }
+]

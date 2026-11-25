@@ -2,6 +2,7 @@
 //   node _qa/visual/run-visual.mjs <playwright-core 的路徑> [base URL]
 // 需要服務已在跑（npm run build && npm start），且該 IP 這一分鐘內送出的留言少於 3 則（腳本會送 1 則）。
 // 截圖寫在本目錄（_qa/visual/）。
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +11,8 @@ const [corePath, base = 'http://localhost:3000'] = process.argv.slice(2);
 const { chromium } = createRequire(import.meta.url)(path.resolve(corePath));
 // 截圖預設寫在本目錄；設 QA_OUT 可改寫到別處（例如 _qa/visual/fix1，不覆蓋既有截圖）
 const out = process.env.QA_OUT ? path.resolve(process.env.QA_OUT) : path.dirname(fileURLToPath(import.meta.url));
+mkdirSync(out, { recursive: true });
+const measurements = [];
 const shot = (page, name) => page.screenshot({ path: path.join(out, name) });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -73,18 +76,22 @@ const visual = (page) =>
       css: [canvas.clientWidth, canvas.clientHeight],
     };
   });
-const report = (label, info, stats) =>
+const report = (label, info, stats) => {
+  measurements.push({ label, info, stats });
+  writeFileSync(path.join(out, 'measurements.json'), JSON.stringify(measurements, null, 2));
   console.log(
     `      ${label}: tier=${info.tier} dof=${info.dof} glow=${info.glow} rays=${info.rays} msaa=${info.msaa} ` +
       `pixelRatio=${info.pixelRatio} canvas=${info.canvas.join('x')} dofBuffer=${info.dofSize.join('x')} ` +
       `${info.lens.focalLength.toFixed(1)}mm fov=${info.lens.fov.toFixed(1)}° focus=${info.lens.focus.toFixed(2)}m` +
       (stats ? ` | ${stats.meanMs} ms/幀 (p95 ${stats.p95Ms})，約 ${stats.fps} fps` : ''),
   );
+};
 const cardOpen = (page) => page.evaluate(() => document.getElementById('wish-card-dialog').open);
 const leafPosition = (page, id) => page.evaluate((wishId) => window.__wishWall.leaves.screenPosition(wishId), id);
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-gpu', '--ignore-gpu-blocklist'] });
 
+if (!process.env.QA_FOREST_ONLY) {
 // ---------- 桌面高檔 ----------
 {
   const { ctx, page } = await open(browser, 'high', '?quality=high');
@@ -214,15 +221,34 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 // ---------- 自動降級：把 CPU 降速到很慢，確認會自己往下換檔而且許願葉還點得到 ----------
 {
   const { ctx, page } = await open(browser, 'auto', '');
-  const before = (await visual(page)).tier;
+  await page.waitForFunction(() => window.__scenes.two);
+  const beforeInfo = await visual(page);
+  const before = beforeInfo.tier;
   const cdp = await ctx.newCDPSession(page);
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 20 });
-  await sleep(26000);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+  // Force sustained slow frames even on a fast host GPU; exercise the actual
+  // frame watcher, rather than invoking the quality setter directly.
+  await page.evaluate(() => {
+    window.__qaSlowFrames = true;
+    const work = () => {
+      if (!window.__qaSlowFrames) return;
+      const until = performance.now() + 35;
+      while (performance.now() < until) { /* deliberate QA workload */ }
+      requestAnimationFrame(work);
+    };
+    requestAnimationFrame(work);
+  });
+  await sleep(40000);
+  await page.evaluate(() => { window.__qaSlowFrames = false; });
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   await sleep(1500);
   const info = await visual(page);
-  report(`自動降級（起點 ${before}，CPU 20× 降速 26 秒後）`, info);
+  report(`自動降級（起點 ${before}，CPU 6× 與強制慢幀 40 秒後）`, info);
   check('自動降級：幀時間過長時會往下換檔', before === 'high' && (info.tier !== 'high' || info.auxScale < 1), `${before} → ${info.tier} auxScale=${info.auxScale}`);
+  check('自動降級：森林實例與神木葉片預算同步減少',
+    info.tier !== 'high' && info.trees.scene1.far < beforeInfo.trees.scene1.far &&
+    info.trees.scene2.giantLeavesDrawn < beforeInfo.trees.scene2.giantLeavesDrawn &&
+    info.trees.scene2.giantLeavesBuilt === beforeInfo.trees.scene2.giantLeavesBuilt);
   const leaf = await page.evaluate(async () => {
     const data = await (await fetch('/api/wishes?limit=100')).json();
     return data.wishes
@@ -296,6 +322,65 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
   await ctx.close();
 }
 
+}
+
+// Forest density matrix: same build A/B, both viewports, both opening tiers.
+if (!process.env.QA_SKIP_FOREST) {
+for (const mobile of [false, true]) for (const quality of ['high', 'low']) {
+  for (const legacy of [true, false]) {
+    const label = `forest-${mobile ? 'mobile' : 'desktop'}-${quality}-${legacy ? 'legacy' : 'layered'}`;
+    const { ctx, page } = await open(browser, label, `?quality=${quality}${legacy ? '&forest=legacy' : ''}`, {
+      viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 800 },
+      deviceScaleFactor: 1,
+    });
+    await page.waitForFunction(() => window.__visual.info().trees.scene1.near === 58);
+    await sleep(4000);
+    const info = await visual(page);
+    report(label, info, await frameStats(page));
+    check(`${label}: layer budgets and draw calls`, info.trees.scene1.near === 58 &&
+      (legacy ? info.trees.scene1.mid === 0 && info.trees.scene1.far === 0 : info.trees.scene1.mid > 0 && info.trees.scene1.far > 0));
+    await shot(page, `${label}.png`);
+    if (!legacy) {
+      for (const time of ['afternoon', 'dusk', 'night']) {
+        await page.evaluate(async (t) => { await window.__scenes.switchTo(2); await window.__scenes.setTime(t); }, time);
+        await sleep(2000);
+        const second = await visual(page);
+        report(`${label}-scene2-${time}`, second);
+        check(`${label}-${time}: giant budget`, second.trees.scene2.giantLeavesDrawn === (quality === 'high' ? 30000 : 11000));
+        await shot(page, `${label}-scene2-${time}.png`);
+      }
+      for (const scene of [1, 2]) {
+        await page.evaluate(async (s) => window.__scenes.switchTo(s), scene);
+        await sleep(1000);
+        const p = await leafPosition(page, 3);
+        check(`${label}-scene${scene}: wish 3 in viewport`, p && p.x > 0 && p.x < info.css[0] && p.y > 0 && p.y < info.css[1]);
+        if (p) {
+          await page.mouse.click(p.x, p.y);
+          await sleep(300);
+          check(`${label}-scene${scene}: wish 3 clickable`, await cardOpen(page));
+          await page.keyboard.press('Escape');
+        }
+      }
+      await page.evaluate(async () => window.__scenes.switchTo(1));
+      await sleep(1000);
+      check(`${label}: return to scene 1 preserves trees`, JSON.stringify((await visual(page)).trees.scene1) === JSON.stringify(info.trees.scene1));
+      const budgetCheck = await page.evaluate(() => {
+        const giant = window.__scenes.two.giant;
+        const geometry = giant.foliageMesh.geometry;
+        const built = giant.leafCount;
+        giant.setLeafBudget(20000);
+        const mid = giant.leavesDrawn === Math.min(built, 20000) && geometry.drawRange.count === giant.leavesDrawn * 30;
+        giant.setLeafBudget(11000);
+        return mid && giant.leafCount === built && giant.leavesDrawn === 11000 &&
+          geometry.drawRange.count === 330000 && geometry === giant.foliageMesh.geometry;
+      });
+      check(`${label}: giant drawRange degrades without rebuilding`, budgetCheck);
+    }
+    await ctx.close();
+  }
+}
+
+}
 await browser.close();
 
 console.log('');
