@@ -191,7 +191,7 @@ for (const q of ['high', 'mid', 'low']) {
   await ctx.close();
 }
 
-// 手機（low）：不拍水面反射
+// 手機：初始自動選 mid
 {
   const { ctx, page } = await newPage({
     viewport: { width: 390, height: 844 },
@@ -200,11 +200,21 @@ for (const q of ['high', 'mid', 'low']) {
     hasTouch: true,
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
   });
+  // 保存渲染迴圈開始前的初始檔次，不受場景載入期間自動降級影響。
+  await page.addInitScript(() => {
+    Object.defineProperty(window, '__visual', {
+      configurable: true,
+      set(value) {
+        window.__qaInitialQuality = { ...value.info(), pixelRatio: value.pixelRatio };
+        Object.defineProperty(window, '__visual', { value, writable: true, configurable: true });
+      },
+    });
+  });
   await page.goto(`${base}/?scene=2`);
   await waitReady(page);
   await page.waitForFunction(() => window.__scenes.current === 2 && !window.__scenes.busy, null, { timeout: 60000 });
-  const info = await page.evaluate(() => ({ tier: window.__visual.tier, env: window.__scenes.two.water?.hasEnv ?? null }));
-  check('手機自動選 low', info.tier === 'low', info.tier);
+  const info = await page.evaluate(() => window.__qaInitialQuality);
+  check('手機初始自動選 mid', info.tier === 'mid' && !info.forced && info.glow && !info.dof && info.rays === 'lite' && info.pixelRatio <= 1.5, info.tier);
   const switchBox = await page.evaluate(() => {
     const a = document.querySelector('.scene-switch').getBoundingClientRect();
     const b = document.getElementById('wish-open').getBoundingClientRect();

@@ -36,6 +36,16 @@ async function open(browser, label, query, context = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: 'zh-TW', ...context });
   const page = await ctx.newPage();
   watch(page, label);
+  // 在渲染迴圈開始前保存初始設定，避免載入等待或 CPU 節流後已自動降級。
+  await page.addInitScript(() => {
+    Object.defineProperty(window, '__visual', {
+      configurable: true,
+      set(value) {
+        window.__qaInitialQuality = { ...value.info(), pixelRatio: value.pixelRatio };
+        Object.defineProperty(window, '__visual', { value, writable: true, configurable: true });
+      },
+    });
+  });
   await page.goto(`${base}/${query}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__wishWall?.leaves.size > 0);
   await sleep(5000);
@@ -164,7 +174,9 @@ if (!process.env.QA_FOREST_ONLY) {
   await sleep(1000);
   const info = await visual(page);
   report('手機模擬（CPU 4× 降速）', info, await frameStats(page));
-  check('手機：自動選 low、DOF／glow 關閉、簡化光柱（lite）、pixel ratio ≤ 1.5', info.tier === 'low' && !info.dof && !info.glow && info.rays === 'lite' && info.pixelRatio <= 1.5);
+  const initialInfo = await page.evaluate(() => window.__qaInitialQuality);
+  check('手機：初始選 mid、glow 開啟、DOF 關閉、簡化光柱（lite）、pixel ratio ≤ 1.5',
+    initialInfo.tier === 'mid' && !initialInfo.forced && !initialInfo.dof && initialInfo.glow && initialInfo.rays === 'lite' && initialInfo.pixelRatio <= 1.5);
   check('手機：後期仍做 tone mapping（管線啟用）', info.supported);
   await shot(page, '05-mobile-default.png');
   await shot(page, '10-mobile-dismissed.png');

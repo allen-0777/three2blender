@@ -65,7 +65,7 @@ export function chooseInitialTier({ isSmallScreen }) {
   if (requested && TIERS[requested]) return { tier: requested, forced: true };
 
   const coarse = window.matchMedia('(pointer: coarse)').matches;
-  if (isSmallScreen || coarse) return { tier: 'low', forced: false };
+  if (isSmallScreen || coarse) return { tier: 'mid', forced: false };
   const cores = navigator.hardwareConcurrency ?? 8;
   const memory = navigator.deviceMemory ?? 8;
   if (cores <= 4 || memory <= 4) return { tier: 'mid', forced: false };
