@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 
+export const LOBE_COUNT = 13;
+export const FILL = { ratio: 0.4, minComponent: 6 };
+export const BOUNDARY = { start: 0.78, drop: 0.86, dropChance: 0.5, shrink: 0.8 };
+// Lobe base colors are sampled here, on the independent foliage RNG stream.
+const LOBE_PALETTE = [
+  [0xa3141d, 3], [0xc0201c, 4], [0xd63a1c, 3], [0xe2581e, 2], [0xec8422, 1.2], [0x8a3a1c, 0.8],
+];
+
 export const OPEN_WINDOW = { az: [14.5, 25], el: [9, 19] };
 export const SUN_WINDOWS = [{ az: -25, el: 12, r: 5 }];
 const DEG = 180 / Math.PI;
@@ -14,12 +22,74 @@ export function addLimbTips(limbCurves, branchCurves, rng, detail) {
       point.x += between(rng, -0.5, 0.5);
       point.z += between(rng, -0.5, 0.5);
       point.y -= between(rng, ...down);
-      tips.push({ point, radius: between(rng, ...radius) });
+      tips.push({ point, radius: between(rng, ...radius), stacked: true });
     }
   };
-  add(limbCurves, [0.55, 0.75, 0.92], [0.6, 1], [2.2, 3]);
-  if (detail !== 'low') add(branchCurves, [0.3, 0.6], [0.3, 0.5], [1.5, 2.1]);
+  add(limbCurves, [0.78, 0.94], [0.6, 1], [1.8, 2.6]);
+  if (detail !== 'low') add(branchCurves, [0.65], [0.3, 0.5], [1.5, 2.1]);
   return tips;
+}
+
+export function buildLobes(tips, rng, count = LOBE_COUNT) {
+  if (!tips.length || count <= 0) return [];
+  const seeds = [tips.reduce((highest, t) => t.point.y > highest.point.y ? t : highest)];
+  while (seeds.length < Math.min(count, tips.length)) {
+    let next, farthest = -1;
+    for (const t of tips) {
+      if (seeds.includes(t)) continue;
+      const distance = Math.min(...seeds.map((s) => t.point.distanceToSquared(s.point)));
+      if (distance > farthest) { farthest = distance; next = t; }
+    }
+    seeds.push(next);
+  }
+  return seeds.map((t) => {
+    const scale = between(rng, 0.75, 1.3);
+    const density = between(rng, 0.75, 1.25);
+    let weight = rng() * LOBE_PALETTE.reduce((sum, [, w]) => sum + w, 0);
+    const base = LOBE_PALETTE.find(([, w]) => (weight -= w) < 0)[0];
+    return { center: t.point.clone(), scale, density, base,
+      hue: between(rng, -0.02, 0.02), sat: between(rng, 0.8, 1.05), light: between(rng, 0.85, 1.12) };
+  });
+}
+
+export function assignLobes(tips, lobes) {
+  for (const t of tips) {
+    let d1 = Infinity, d2 = Infinity;
+    lobes.forEach((lobe, i) => {
+      const d = t.point.distanceTo(lobe.center) / lobe.scale;
+      if (d < d1) { d2 = d1; d1 = d; t.lobe = i; }
+      else if (d < d2) d2 = d;
+    });
+    t.lobeEdge = d2 === 0 ? 1 : d1 / d2;
+  }
+  return tips;
+}
+
+export function thinLobeBoundaries(tips, rng) {
+  const counts = new Map();
+  for (const t of tips) counts.set(t.lobe, (counts.get(t.lobe) ?? 0) + 1);
+  const remaining = new Map(counts);
+  return tips.filter((t) => {
+    if (t.lobeEdge > BOUNDARY.drop && rng() < BOUNDARY.dropChance &&
+        remaining.get(t.lobe) > Math.ceil(counts.get(t.lobe) * 0.6)) {
+      remaining.set(t.lobe, remaining.get(t.lobe) - 1);
+      return false;
+    }
+    if (t.lobeEdge > BOUNDARY.start) t.radius *= BOUNDARY.shrink;
+    return true;
+  });
+}
+
+export function carveBranchWindows(tips, corridors) {
+  const sampled = corridors.map(({ curve, u, r0 }) => ({ r0,
+    points: Array.from({ length: 12 }, (_, i) => curve.getPointAt(u[0] + (u[1] - u[0]) * i / 11)) }));
+  const kept = [], removed = [];
+  for (const t of tips) {
+    const inside = sampled.some(({ points, r0 }) => points.some((p) =>
+      t.point.distanceTo(p) < t.radius * 0.9 + r0 + 0.3));
+    (inside ? removed : kept).push(t);
+  }
+  return { kept, removed };
 }
 
 function project(tip, { base, scale, eye }) {
@@ -82,16 +152,17 @@ export function coverageGrid(tips, options) {
 }
 
 /** Return only filler tips; tiny sky holes intentionally survive. */
-export function fillGaps(tips, { base, scale, eye, rng, maxFill }) {
+export function fillGaps(tips, { base, scale, eye, rng, maxFill,
+  ratio = FILL.ratio, minComponent = FILL.minComponent, skip = null }) {
   const options = { base, scale, eye };
   const grid = coverageGrid(tips, options);
   const fillers = [];
-  for (const component of grid.components.filter((c) => c.length >= 3)) {
-    const target = Math.ceil(component.length * 0.7);
+  for (const component of grid.components.filter((c) => c.length >= minComponent)) {
+    const target = Math.ceil(component.length * ratio);
     const covered = new Set();
     const parity = rng() < 0.5 ? 0 : 1;
     // Start with alternating cells. A 1.2° filler can be smaller than the 1.5°
-    // grid spacing, so finish the other parity only until 70% is covered.
+    // grid spacing, so finish the other parity only until the target is covered.
     const candidates = [...component].sort((a, b) =>
       Number(Math.abs((b.x + b.y) % 2) === parity) - Number(Math.abs((a.x + a.y) % 2) === parity));
     for (const cell of candidates) {
@@ -104,6 +175,7 @@ export function fillGaps(tips, { base, scale, eye, rng, maxFill }) {
         .multiplyScalar(nearest.distance).add(eye).sub(base).divideScalar(scale).add(base);
       const tip = { point, radius: THREE.MathUtils.clamp(nearest.distance * Math.tan(1.2 / DEG) / scale / 0.8, 1.4, 2.4), filler: true };
       if (isOpenSky(tip, { ...options, margin: 2 })) continue;
+      if (skip?.(tip)) continue;
       fillers.push(tip);
       const projected = project(tip, options);
       for (const c of component) if (Math.hypot(c.az - cell.az, c.el - cell.el) <= projected.r) covered.add(c);

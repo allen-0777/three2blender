@@ -4,7 +4,7 @@ import { createRng, pickLeafHue, range } from '../palette.js';
 import { createTrunkMaterial, createFoliageMaterial } from '../trees.js';
 import { GIANT_TREE, groundHeight2 } from './terrain.js';
 import { sceneTwoSun } from './materials.js';
-import { addLimbTips, fillGaps, isOpenSky } from './canopyTips.js';
+import { addLimbTips, fillGaps, isOpenSky, buildLobes, assignLobes, thinLobeBoundaries, carveBranchWindows, BOUNDARY } from './canopyTips.js';
 
 // 神木：小路盡頭一棵比其他樹大三倍的老楓樹，當作視線的終點。
 // 全部程式生成：粗壯、有板根的樹幹分出五、六根大枝，往兩側與上方展開，
@@ -72,13 +72,19 @@ const LEAF = [
   [0, 0.52], [-0.36, 0.38], [-0.3, 0.12], [-0.5, -0.04], [-0.3, -0.12],
 ];
 
-/** 神木偏愛鮮紅與朱紅（概念圖的主角），少量橘 */
-function giantHue(rng) {
+const WITHERED = [0x7a3418, 0x8c4a22, 0x6e2c1a];
+const YELLOW = [0xf0c234, 0xf29d24];
+const UP_FRONT = new THREE.Vector3(0, 0.8, 0.35).normalize();
+
+function giantLeafColor(rng, lobe, rim, out) {
   const r = rng();
-  if (r < 0.34) return 0xb3161c;
-  if (r < 0.68) return 0xd0261c;
-  if (r < 0.86) return 0xe2491f;
-  return pickLeafHue(rng);
+  out.setHex(r < 0.70 ? lobe.base : r < 0.88 ? pickLeafHue(rng) :
+    r < 0.95 ? WITHERED[Math.floor(rng() * 3)] : rim > 0.5 ? YELLOW[Math.floor(rng() * 2)] : pickLeafHue(rng));
+  const hsl = {};
+  out.getHSL(hsl);
+  return out.setHSL(hsl.h + lobe.hue + range(rng, -0.025, 0.025),
+    THREE.MathUtils.clamp(hsl.s * lobe.sat * range(rng, 0.85, 1.1), 0, 1),
+    THREE.MathUtils.clamp(hsl.l * lobe.light * range(rng, 0.8, 1.15), 0, 1));
 }
 
 /**
@@ -132,11 +138,11 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000, detail
     { a: Math.PI * 0.2, up: 1.1, len: 10.8 }, // 右後偏上
     { a: Math.PI * 0.5, up: 1.8, len: 9.5 }, // 往後、往上
     { a: Math.PI * 1.55, up: 1.0, len: 7.5 }, // 往前（短）
-    { a: Math.PI * 1.25, up: 0.55, len: 10 }, // 左前，低而長
+    { a: Math.PI * 1.25, up: 0.55, len: 10, bare: [0.12, 0.55] }, // 左前，低而長
     { a: Math.PI * 1.78, up: 0.55, len: 8.0 }, // 右前
     // 從樹幹中段分出的低枝（打破 Y 字形），水平展開
-    { a: Math.PI * 1.1, up: 0.55, len: 6.5, from: 0.6 },
-    { a: -0.15, up: 0.6, len: 6.0, from: 0.66 },
+    { a: Math.PI * 1.1, up: 0.55, len: 6.5, from: 0.6, bare: [0.1, 0.65] },
+    { a: -0.15, up: 0.6, len: 6.0, from: 0.66, bare: [0.1, 0.6] },
     { a: Math.PI * 0.6, up: 0.7, len: 6, from: 0.55 },
   ];
   for (const limb of limbs) {
@@ -147,7 +153,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000, detail
     const curve = bentCurve(start, dir, limb.len, rng, 0.4);
     const r0 = range(rng, 0.7, 0.92) * (limb.from ? 0.75 : 1);
     wood.push(tube(curve, (u) => r0 * (1 - 0.6 * u) * (1 + 0.5 * Math.exp(-u * 10)), { segments: 18, sides: 16, bumps: 0.12, bumpSeed: limb.a }));
-    limbCurves.push({ curve, r0, from: limb.from });
+    limbCurves.push({ curve, r0, from: limb.from, bare: limb.bare });
     // 第二層：每根大枝分出 3～4 根小枝
     const branchCount = 3 + Math.floor(rng() * 2);
     for (let b = 0; b < branchCount; b++) {
@@ -176,6 +182,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000, detail
     }
   }
 
+  const baseTips = tips.slice();
   const trunkGeometry = mergeGeometries(wood);
   trunkGeometry.computeBoundingSphere();
   const trunkMaterial = createTrunkMaterial({ barkNormals });
@@ -190,11 +197,21 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000, detail
   const eye = new THREE.Vector3(0, 1.9, 12);
   const fillRng = createRng(31337 * 7 + 1);
   const options = { base, scale: SCALE, eye, margin: 2 };
+  const lobeRng = createRng(31337 * 13 + 5);
+  const lobes = buildLobes(baseTips, lobeRng);
+  const corridors = limbCurves.filter((l) => l.bare).map((l) => ({ curve: l.curve, u: l.bare, r0: l.r0 }));
   tips.push(...addLimbTips(limbCurves, branchCurves, fillRng, detail));
-  const protectedTips = tips.filter((t) => !isOpenSky(t, options));
-  const fillers = fillGaps(protectedTips, { ...options, rng: fillRng, maxFill: { high: 70, mid: 55, low: 40 }[detail] });
-  const open = [...protectedTips, ...fillers].filter((t) => !isOpenSky(t, options));
-  const { geometry: foliageGeometry, crown, leafCount } = buildFoliage(open, leafBudget, rng, detail);
+  const visible = tips.filter((t) => !isOpenSky(t, options));
+  const { kept } = carveBranchWindows(visible, corridors);
+  const clumped = thinLobeBoundaries(assignLobes(kept, lobes), lobeRng);
+  const inCorridor = (t) => carveBranchWindows([t], corridors).removed.length > 0;
+  const fillers = assignLobes(fillGaps(clumped, { ...options, rng: fillRng,
+    maxFill: { high: 70, mid: 55, low: 40 }[detail],
+    skip: (t) => inCorridor(t) || assignLobes([t], lobes)[0].lobeEdge > BOUNDARY.drop }), lobes);
+  const open = [...clumped, ...fillers].filter((t) => !isOpenSky(t, options));
+  const eyeLocal = eye.clone().sub(base).divideScalar(SCALE).add(base);
+  const { geometry: foliageGeometry, crown, leafCount } = buildFoliage(open, leafBudget, rng, detail,
+    { lobes, axis: new THREE.Vector2(base.x, base.z), eye: eyeLocal });
   const tipCount = open.length;
   const fillerCount = open.filter((t) => t.filler).length;
   const foliageMesh = new THREE.Mesh(foliageGeometry, createFoliageMaterial({ sunWorld: sceneTwoSun }));
@@ -213,6 +230,7 @@ export function createGiantTree({ barkNormals = true, leafBudget = 16000, detail
   let leavesDrawn = leafCount;
   foliageGeometry.setDrawRange(0, leavesDrawn * LEAF.length * 3);
   return { group, trunkMesh, foliageMesh, crown, leafCount, tipCount, fillerCount,
+    lobeCount: lobes.length, bareLimbCount: corridors.length,
     get leavesDrawn() { return leavesDrawn; },
     setLeafBudget(budget) {
       leavesDrawn = Math.min(leavesDrawn, Math.max(0, Math.floor(budget)));
@@ -251,20 +269,28 @@ function addMoss(material) {
 }
 
 /** 葉叢：每個 tip 一團小楓葉，越深入樹冠、越靠葉叢內側越暗 */
-export function buildFoliage(tips, budget, rng, detail = 'high') {
+export function buildFoliage(tips, budget, rng, detail = 'high', { lobes = null, axis = null, eye = null } = {}) {
   const crown = new THREE.Vector3();
   tips.forEach((t) => crown.add(t.point));
   crown.divideScalar(tips.length);
+  axis ??= new THREE.Vector2(crown.x, crown.z);
+  eye ??= crown.clone().add(new THREE.Vector3(0, -10, 40));
+  const defaultLobe = { center: crown, scale: 1, density: 1, base: 0xc0201c, hue: 0, sat: 1, light: 1 };
+  const lobeOf = (t) => lobes ? lobes[t.lobe] : defaultLobe;
+  const edgeOf = (t) => lobes ? (t.lobeEdge ?? 0) : 0;
   let crownRadius = 0;
+  let crownRadiusXZ = 0;
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const t of tips) {
     crownRadius = Math.max(crownRadius, t.point.distanceTo(crown) + t.radius);
+    crownRadiusXZ = Math.max(crownRadiusXZ, Math.hypot(t.point.x - axis.x, t.point.z - axis.y) + t.radius);
     yMin = Math.min(yMin, t.point.y - t.radius);
     yMax = Math.max(yMax, t.point.y + t.radius);
   }
   const medianHeight = tips.map((t) => t.point.y).sort((a, b) => a - b)[Math.floor(tips.length / 2)];
-  const weights = tips.map((t) => t.radius ** 2 * (t.point.y <= medianHeight ? 1.6 : 1));
+  const weights = tips.map((t) => t.radius ** 2 * (t.point.y <= medianHeight ? 1.35 : 1)
+    * lobeOf(t).density * (1 - 0.35 * edgeOf(t)));
   const weightSum = weights.reduce((a, b) => a + b, 0);
   const counts = weights.map((w) => Math.max(12, Math.round(budget * w / weightSum)));
   // Correct rounding without exceeding the requested buffer budget.
@@ -278,11 +304,11 @@ export function buildFoliage(tips, budget, rng, detail = 'high') {
   tips.forEach((t, ti) => {
     for (let i = 0; i < counts[ti]; i++) {
       const fraction = i / counts[ti];
-      const kind = fraction < 0.7 ? 'shell' : fraction < 0.85 ? 'edge' : 'core';
+      const kind = fraction < 0.62 ? 'shell' : fraction < 0.76 ? 'edge' : 'core';
       const below = t.point.y <= medianHeight;
       const upperBack = !below && t.point.z < crown.z;
-      const priority = (kind === 'core' ? 0 : upperBack ? 0.5 : 2) + (below ? 1 : 0);
-      const order = kind === 'shell' ? fraction / 0.7 : kind === 'edge' ? (fraction - 0.7) / 0.15 : (fraction - 0.85) / 0.15;
+      const priority = (kind === 'core' ? 0.8 : upperBack ? 0.5 : 2) + (below ? 1 : 0);
+      const order = kind === 'shell' ? fraction / 0.62 : kind === 'edge' ? (fraction - 0.62) / 0.14 : (fraction - 0.76) / 0.24;
       leaves.push({ t, kind, priority, order });
     }
   });
@@ -306,6 +332,10 @@ export function buildFoliage(tips, budget, rng, detail = 'high') {
   const corner = new THREE.Vector3();
   const offset = new THREE.Vector3();
   const c = new THREE.Color();
+  const hsl = {};
+  const offsetFromLobe = new THREE.Vector3();
+  const eyeDir = new THREE.Vector3();
+  const logSize = (a, b) => a * (b / a) ** rng();
   const randomUnit = (target) => {
     const z = range(rng, -1, 1);
     const a = rng() * TAU;
@@ -323,36 +353,47 @@ export function buildFoliage(tips, budget, rng, detail = 'high') {
     return v++;
   };
   for (const { t, kind } of leaves) {
+    const lobe = lobeOf(t);
+    const lobeScale = THREE.MathUtils.lerp(0.9, 1.1, (lobe.scale - 0.75) / 0.55);
     randomUnit(dir);
     if (kind === 'edge') { dir.y = -0.2 - Math.abs(dir.y); dir.normalize(); }
-    const radial = kind === 'core' ? range(rng, 0.2, 0.55) : 0.6 + 0.4 * Math.sqrt(rng());
+    const radial = kind === 'core' ? range(rng, 0.25, 0.6) : 0.6 + 0.4 * Math.sqrt(rng());
     center.copy(t.point).addScaledVector(dir, t.radius * radial);
     center.y = t.point.y + dir.y * t.radius * radial * (dir.y > 0 ? 0.8 : 1.2);
     if (kind === 'edge') center.y -= t.radius * (0.25 + 0.35 * Math.abs(dir.y));
-    const size = (kind === 'core' ? range(rng, 0.5, 0.7) : range(rng, 0.32, 0.48)) *
+    const size = (kind === 'core' ? range(rng, 0.4, 0.7) : logSize(0.26, 0.62)) * lobeScale *
       (kind === 'edge' ? 1.1 : 1) * (detail === 'low' ? 1.2 : 1);
-    randomUnit(n).multiplyScalar(0.6).add(dir).normalize();
+    randomUnit(n).multiplyScalar(range(rng, 0.5, 1.3)).add(dir).normalize();
     randomUnit(hang).multiplyScalar(0.6).add(corner.set(0, kind === 'edge' ? -1.2 : -0.6, 0));
     tip.copy(hang).addScaledVector(n, -hang.dot(n));
     if (tip.lengthSq() < 1e-6) tip.set(1, 0, 0).cross(n);
     tip.normalize();
     right.crossVectors(tip, n);
+    const roll = range(rng, -0.9, 0.9);
+    tip.applyAxisAngle(n, roll);
+    right.crossVectors(tip, n);
 
-    // AO：在樹冠裡的深度、在葉叢裡的位置、高度
+    // AO：樹幹內側、葉團下緣及葉叢底面較暗，輪廓保留亮邊。
     const depth = center.distanceTo(crown) / crownRadius;
+    const axial = Math.hypot(center.x - axis.x, center.z - axis.y) / crownRadiusXZ;
     const height = THREE.MathUtils.clamp((center.y - yMin) / (yMax - yMin), 0, 1);
-    let a = 0.12 + 0.88 * THREE.MathUtils.smoothstep(depth, 0.2, 0.9);
-    a *= 0.5 + 0.5 * THREE.MathUtils.smoothstep(radial, 0.3, 1.0);
-    a *= 0.7 + 0.3 * height;
+    const lobeUp = offsetFromLobe.subVectors(center, lobe.center).normalize().dot(UP_FRONT);
+    const toEye = eyeDir.subVectors(eye, t.point).normalize();
+    const rim = 1 - Math.abs(dir.dot(toEye));
+    let a = 0.18 + 0.82 * THREE.MathUtils.smoothstep(axial * 0.6 + depth * 0.4, 0.15, 0.9);
+    a *= THREE.MathUtils.lerp(0.55, 1, THREE.MathUtils.smoothstep(lobeUp, -0.8, 0.7));
+    a *= THREE.MathUtils.lerp(0.65, 1, THREE.MathUtils.smoothstep(dir.y, -0.7, 0.6));
+    a *= 0.75 + 0.25 * height;
+    const rimLit = rim > 0.75 && depth > 0.72 && edgeOf(t) < 0.9;
+    if (rimLit) a = Math.max(a, 0.85);
+    if (kind === 'core') a = range(rng, 0.12, 0.28);
     a = THREE.MathUtils.clamp(a, 0.08, 1);
-    if (kind === 'core') a = range(rng, 0.08, 0.2);
     offset.subVectors(center, crown).divideScalar(crownRadius);
 
-    c.setHex(giantHue(rng));
-    const hsl = {};
-    c.getHSL(hsl);
-    c.setHSL(hsl.h + range(rng, -0.012, 0.012), Math.min(1, hsl.s * range(rng, 0.9, 1.1)), hsl.l * range(rng, 0.85, 1.1));
-    if (kind === 'core') c.multiplyScalar(0.55);
+    giantLeafColor(rng, lobe, rimLit ? 1 : rim * 0.5, c);
+    if (a < 0.4) { c.getHSL(hsl); c.setHSL(hsl.h, hsl.s * 0.75, hsl.l * 0.8); }
+    if (rimLit) { c.getHSL(hsl); c.setHSL(hsl.h + 0.015, hsl.s, Math.min(1, hsl.l * 1.15)); }
+    if (kind === 'core') c.multiplyScalar(0.7);
     const baseVertex = push(corner.copy(center).addScaledVector(n, -size * 0.1), c.clone().multiplyScalar(0.8), a);
     for (const [x, y] of LEAF) {
       corner.copy(center).addScaledVector(right, x * size).addScaledVector(tip, y * size);
