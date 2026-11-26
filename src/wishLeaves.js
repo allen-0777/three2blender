@@ -11,7 +11,8 @@ import { leafGeometry, LEAF_OUTLINE, LEAF_VEIN_BASE } from './leaves.js';
 
 const WISH_COLORS = [0xffc94d, 0xffa53a, 0xff7a3a, 0xf45a3c, 0xffd978, 0xff8f5a];
 const EDGE_COLOR = 0xffb45e;
-const HALO_COLOR = 0xffc978;
+// 偏暖白：和橘紅樹冠拉開差異（原本 0xffc978 在逆光橘色背景裡容易融掉）
+const HALO_COLOR = 0xffdca0;
 // 後期（ACES）會壓暗接近 1 的亮部並讓亮黃色變淡，自發光補償回來
 // （用葉色再乘一次自己，保住飽和度）
 const BODY_GLOW = 0.8;
@@ -27,6 +28,18 @@ const DEFAULT_TITLE_ZONE = { x: 0.44, top: 0.24, bottom: -0.24 };
 const FRESH_GLOW = 2.6;
 // 葉片大小原本是照 50° 垂直視角調的
 const REFERENCE_HALF_TAN = Math.tan((25 * Math.PI) / 180);
+// 許願葉很少時（≤ FEW_LEAVES 片）全部放近、一樣亮，數量到 FEW_LEAVES × 3 時才完全展開成遠近層次。
+// 只有幾片時，遠處又暗又小的葉子會融進樹冠，幾乎找不到。
+const FEW_LEAVES = 12;
+const NEAR_SPAN = 4; // 葉子少時的深度範圍：7～11 公尺
+const FULL_SPAN = 19; // 展開後：7～26 公尺
+// 葉子少時避開畫面正中央（逆光最亮、霧最濃，暖色光暈會被吃掉）
+const CENTER_CLEAR = 0.16;
+// 葉子少時光暈加強的倍數
+const FEW_HALO_BOOST = 1.5;
+// 錯開的「呼吸」：每片約每 5 秒亮起一次，吸引視線
+const BEACON_PERIOD = 5.2;
+const BEACON_GAIN = 0.45;
 const easeOutCubic = (t) => 1 - (1 - t) ** 3;
 
 function createHaloTexture() {
@@ -128,7 +141,9 @@ function createMeshes(capacity) {
           vec3 wishTint = diffuseColor.rgb * ( 0.3 + 0.7 * diffuseColor.rgb );
           float wishLevel = 0.5 + 0.45 * wishCore + 0.3 * wishSoft;
           totalEmissiveRadiance += wishTint * wishLevel * ${BODY_GLOW.toFixed(2)}
-            + mix( wishTint, vec3( 1.0, 0.8, 0.5 ), 0.6 ) * wishLine * 0.4;
+            + mix( wishTint, vec3( 1.0, 0.8, 0.5 ), 0.6 ) * wishLine * 0.4
+            // 葉心一點暖白光：一般落葉沒有，和橘紅樹冠區分開
+            + vec3( 1.0, 0.88, 0.66 ) * wishCore * wishCore * 0.22;
         }`,
       );
   };
@@ -204,10 +219,18 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   let halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   // 沒有選取時的對焦距離（沿鏡頭前方的公尺數），見 focusDepth()
   let restFocus = DEFAULT_FOCUS;
+  // 0 = 葉子很少（全部放近、一樣亮），1 = 葉子夠多（完整遠近層次）
+  let spread = 0;
+  const spreadFor = (count) => THREE.MathUtils.smoothstep(count, FEW_LEAVES, FEW_LEAVES * 3);
 
   /** 依目前畫面比例，算出葉子停留的世界座標 */
   function placeHome(leaf) {
-    const depth = leaf.featured ? 6.5 + leaf.depthT * 2 : 7 + leaf.depthT ** 1.3 * 19;
+    // 只有橫式畫面才把葉子拉近：直式要把一部分葉子放到標題與按鈕之間的暗色地面上，
+    // 那個位置太近會低於地面高度（見下方 0.6 公尺的下限），所以直式維持原本的深度分布
+    const landscape = camera.aspect >= 0.85;
+    const compress = landscape ? 1 - spread : 0;
+    const span = FULL_SPAN - (FULL_SPAN - NEAR_SPAN) * compress;
+    const depth = leaf.featured ? 6.5 + leaf.depthT * 2 : 7 + leaf.depthT ** 1.3 * span;
     const halfWidth = Math.min(depth * halfTan * camera.aspect * 0.84, 15);
     const top = Math.min(cameraBase.y + depth * (0.036 + halfTan * 0.74), 7.2);
     const u = leaf.featured ? leaf.u * 0.4 : leaf.u;
@@ -217,6 +240,13 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     const toScreenY = depth * halfTan;
     let screenX = leaf.home.x / toScreenX;
     let screenY = (leaf.home.y - cameraBase.y) / toScreenY;
+    // 葉子少時避開正中央的逆光濃霧（左右推開，保留原本的偏左／偏右）
+    const centerClear = CENTER_CLEAR * compress;
+    if (!leaf.featured && centerClear > 0 && Math.abs(screenX) < centerClear) {
+      const side = screenX < 0 ? -1 : 1;
+      screenX = side * (centerClear + Math.abs(screenX) * 0.5);
+      leaf.home.x = screenX * toScreenX;
+    }
     // 避開中央標題「楓葉季」：自己剛留下的那片移到標題正下方（標題與按鈕之間，背景較暗、最顯眼），
     // 其他的往左右推出標題範圍
     // 停留時還會飄動（driftX／driftY 公尺），範圍再放寬這麼多
@@ -308,9 +338,12 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
   function syncColors() {
     leaves.forEach((leaf, i) => {
       body.setColorAt(i, leaf.color);
-      // 遠近層次：越遠的許願葉邊緣光與光暈越淡，近的與自己剛留下的最亮
-      glowLevel.setScalar(leaf.featured ? FRESH_GLOW : 1.15 - 0.7 * leaf.depthT);
+      // 遠近層次：越遠的許願葉邊緣光與光暈越淡，近的與自己剛留下的最亮。
+      // 葉子少時不做遠近衰減，光暈再加強，每一片都找得到
+      const level = leaf.featured ? FRESH_GLOW : 1.15 - 0.7 * leaf.depthT * spread;
+      glowLevel.setScalar(level);
       edge.setColorAt(i, glowLevel);
+      glowLevel.setScalar(level * (1 + (FEW_HALO_BOOST - 1) * (1 - spread)));
       halo.setColorAt(i, glowLevel);
     });
     for (const mesh of [body, edge, halo]) if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -359,6 +392,10 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       scaleNow: 0,
       emphasis: 0,
     };
+    // 數量跨過門檻時，已在林子裡的葉子也要重新排（深度範圍、避開中央、亮度都跟著變）
+    const nextSpread = spreadFor(Math.min(leaves.length + 1, capacity));
+    const relayout = nextSpread !== spread;
+    spread = nextSpread;
     placeHome(leaf);
     leaf.anchor.copy(leaf.home);
     leaf.position.copy(leaf.home);
@@ -371,6 +408,14 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
     // 超過容量時移除最舊的（保留正在看的那片）
     while (leaves.length > capacity) {
       remove(leaves.find((other) => other.wish.id !== selectedId && other !== leaf) ?? leaves[0]);
+    }
+    if (relayout) {
+      for (const other of leaves) {
+        if (other === leaf) continue;
+        other.moveFrom.copy(other.anchor);
+        other.moveStart = clock;
+        placeHome(other);
+      }
     }
     syncColors();
     updateRestFocus();
@@ -463,9 +508,11 @@ export function createWishLeaves({ camera, cameraBase, reducedMotion = false, ca
       // 邊緣光與葉片同一個變換（裙邊從輪廓往外長，不需要另外放大）
       edge.setMatrixAt(i, dummy.matrix);
 
-      // 光暈永遠面向鏡頭，輕微呼吸
+      // 光暈永遠面向鏡頭，輕微呼吸；另外每片錯開時間、約每 5 秒短暫亮起一次（葉子少時較明顯）
+      const beacon = Math.max(0, Math.sin((time / BEACON_PERIOD) * TAU + leaf.phase2)) ** 8;
       const pulse =
-        1 + Math.sin(time * 1.6 + leaf.phase) * (leaf.featured ? 0.22 : 0.1) * motion + leaf.emphasis * 0.35 + (leaf.featured ? 0.3 : 0);
+        1 + Math.sin(time * 1.6 + leaf.phase) * (leaf.featured ? 0.22 : 0.1) * motion + leaf.emphasis * 0.35 + (leaf.featured ? 0.3 : 0)
+        + beacon * BEACON_GAIN * (1 - 0.5 * spread) * motion * settled;
       haloDummy.position.copy(leaf.position);
       haloDummy.quaternion.copy(camera.quaternion);
       haloDummy.scale.setScalar(leaf.scaleNow * 2.7 * pulse);
